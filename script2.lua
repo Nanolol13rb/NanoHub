@@ -1,4 +1,4 @@
-print("[NanoHub] AimLock v1.30 === START ===")
+print("[NanoHub] AimLock v1.31 === START ===")
 
 local P = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -90,6 +90,17 @@ if hub.cardDraws then
 end
 hub.cardDraws = nil
 
+if hub.arrowDraws then
+    for _, d in pairs(hub.arrowDraws) do
+        pcall(function()
+            if d and d.Remove then
+                d:Remove()
+            end
+        end)
+    end
+end
+hub.arrowDraws = nil
+
 if hub.hbCache then
     for part, size in pairs(hub.hbCache) do
         pcall(function()
@@ -100,6 +111,17 @@ if hub.hbCache then
     end
 end
 hub.hbCache = nil
+
+if hub.xrayCache then
+    for part in pairs(hub.xrayCache) do
+        pcall(function()
+            if part and part.Parent then
+                part.LocalTransparencyModifier = 0
+            end
+        end)
+    end
+end
+hub.xrayCache = nil
 
 if hub.espCache then
     for _, e in pairs(hub.espCache) do
@@ -250,6 +272,19 @@ local S = {
     infKeyIdx = 1,
     tpKeyIdx = 1,
     trigKeyIdx = 1,
+    killAuraOn = false,
+    kaRange = 12,
+    kaDelay = 0.5,
+    silentAimOn = false,
+    fullbrightOn = false,
+    noFogOn = false,
+    xrayOn = false,
+    xrayTransp = 0.6,
+    offArrowsOn = false,
+    zoomHackOn = false,
+    zoomDist = 200,
+    antiRagdollOn = false,
+    panicKeyIdx = 9,
 }
 
 -- ============ THEMES ============
@@ -354,6 +389,11 @@ local CFG_CLAMPS = {
     infKeyIdx = { 1, 10 },
     tpKeyIdx = { 1, 10 },
     trigKeyIdx = { 1, 10 },
+    kaRange = { 5, 50 },
+    kaDelay = { 0.1, 3 },
+    xrayTransp = { 0.1, 1 },
+    zoomDist = { 100, 2000 },
+    panicKeyIdx = { 1, 10 },
 }
 
 local function applyConfig(d)
@@ -364,6 +404,7 @@ local function applyConfig(d)
         if k ~= "on" and k ~= "flyOn" and k ~= "noclipOn" and k ~= "clickTpOn"
             and k ~= "infJumpOn" and k ~= "wsEnabled" and k ~= "jpEnabled"
             and k ~= "hbOn" and k ~= "tLockOn" and k ~= "crossOn" and k ~= "fpsBoostOn"
+            and k ~= "killAuraOn" and k ~= "silentAimOn" and k ~= "xrayOn"
             and S[k] ~= nil and type(v) == type(S[k]) then
             local c = CFG_CLAMPS[k]
             if c then
@@ -413,7 +454,6 @@ local function saveSilent()
     end)
 end
 
--- Auto-Save (global, debounced, Datei beim Schedule einfrieren -> kein Profil-Race)
 local autoSaveToken = 0
 local function autoSave()
     if not S.autoSaveAll or not canFS then
@@ -590,6 +630,8 @@ if canDraw then
 end
 
 local crossDraws = {}
+local arrowDraws = {}
+hub.arrowDraws = arrowDraws
 local distLbls = {}
 hub.distLbls = distLbls
 
@@ -841,7 +883,7 @@ local sub = ni("TextLabel", {
     Position = UDim2.new(0, 14, 0, 25),
     Size = UDim2.new(0, 220, 0, 14),
     BackgroundTransparency = 1,
-    Text = "AimLock v1.30  •  " .. LP.DisplayName,
+    Text = "AimLock v1.31  •  " .. LP.DisplayName,
     TextColor3 = SUB,
     TextXAlignment = Enum.TextXAlignment.Left,
     Font = Enum.Font.Gotham,
@@ -1075,7 +1117,7 @@ ni("TextLabel", {
     Position = UDim2.new(0, 10, 0, 0),
     Size = UDim2.new(1, -20, 1, 0),
     BackgroundTransparency = 1,
-    Text = "Hotkeys: Settings-Tab  •  v1.30",
+    Text = "Hotkeys: Settings-Tab  •  v1.31",
     TextColor3 = SUB,
     Font = Enum.Font.Gotham,
     TextSize = 11,
@@ -1083,7 +1125,6 @@ ni("TextLabel", {
     Parent = footer,
 })
 
--- GUI Scale (recentered!)
 local function applyUiScale()
     local w = math.floor(UI_BASE * S.uiScale + 0.5)
     local h = math.floor(UI_BASE * S.uiScale + 0.5)
@@ -1360,6 +1401,42 @@ local function addButton(page, titleTxt, cb)
     end)
 end
 
+local function addInput(page, titleTxt, placeholder, cb)
+    local row = mkRow(page)
+    ni("TextLabel", {
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -140, 1, 0),
+        BackgroundTransparency = 1,
+        Text = titleTxt,
+        TextColor3 = TXT,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = row,
+    })
+    local box = ni("TextBox", {
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -8, 0.5, 0),
+        Size = UDim2.new(0, 120, 0, 22),
+        BackgroundColor3 = BG0,
+        TextColor3 = TXT,
+        Text = "",
+        PlaceholderText = placeholder,
+        PlaceholderColor3 = SUB,
+        TextSize = 12,
+        Font = Enum.Font.Gotham,
+        ClearTextOnFocus = false,
+        Parent = row,
+    })
+    ni("UICorner", { CornerRadius = UDim.new(0, 6), Parent = box })
+    box.FocusLost:Connect(function(enter)
+        if enter then
+            pcall(cb, box.Text)
+        end
+    end)
+    return box
+end
+
 local function syncUI()
     for key, ctrl in pairs(CTRLS) do
         local c = ctrl
@@ -1466,6 +1543,133 @@ if S.filterOn then
     applyFilter()
 end
 
+-- ============ WORLD MODULE (Fullbright / NoFog / XRay / Zoom) ============
+local fbSaved = nil
+local function applyFullbright(on)
+    if on then
+        if not fbSaved then
+            fbSaved = {
+                b = Lighting.Brightness,
+                ct = Lighting.ClockTime,
+                am = Lighting.Ambient,
+                oa = Lighting.OutdoorAmbient,
+                gs = Lighting.GlobalShadows,
+            }
+        end
+        pcall(function() Lighting.Brightness = 3 end)
+        pcall(function() Lighting.ClockTime = 14 end)
+        pcall(function() Lighting.Ambient = Color3.new(1, 1, 1) end)
+        pcall(function() Lighting.OutdoorAmbient = Color3.new(1, 1, 1) end)
+        pcall(function() Lighting.GlobalShadows = false end)
+    else
+        if fbSaved then
+            pcall(function() Lighting.Brightness = fbSaved.b end)
+            pcall(function() Lighting.ClockTime = fbSaved.ct end)
+            pcall(function() Lighting.Ambient = fbSaved.am end)
+            pcall(function() Lighting.OutdoorAmbient = fbSaved.oa end)
+            pcall(function() Lighting.GlobalShadows = fbSaved.gs end)
+            fbSaved = nil
+        end
+    end
+end
+
+local fogSaved = nil
+local function applyNoFog(on)
+    if on then
+        if not fogSaved then
+            fogSaved = { fe = Lighting.FogEnd, fs = Lighting.FogStart }
+        end
+        pcall(function() Lighting.FogEnd = 100000 end)
+        pcall(function() Lighting.FogStart = 0 end)
+    else
+        if fogSaved then
+            pcall(function() Lighting.FogEnd = fogSaved.fe end)
+            pcall(function() Lighting.FogStart = fogSaved.fs end)
+            fogSaved = nil
+        end
+    end
+end
+
+local xrayCache = {}
+hub.xrayCache = xrayCache
+local xrayAcc = 0
+
+local function xrayRestore()
+    for part in pairs(xrayCache) do
+        pcall(function()
+            if part and part.Parent then
+                part.LocalTransparencyModifier = 0
+            end
+        end)
+    end
+    table.clear(xrayCache)
+end
+
+local function xrayScan()
+    local charSet = {}
+    for _, pl in ipairs(P:GetPlayers()) do
+        if pl.Character then
+            charSet[pl.Character] = true
+        end
+    end
+    for _, inst in ipairs(workspace:GetDescendants()) do
+        if inst:IsA("BasePart") and not inst:IsA("Terrain") then
+            if not xrayCache[inst] and not charSet[inst] and not charSet[inst.Parent] then
+                xrayCache[inst] = true
+            end
+        end
+    end
+    for part in pairs(xrayCache) do
+        if not part.Parent then
+            xrayCache[part] = nil
+        else
+            pcall(function()
+                part.LocalTransparencyModifier = S.xrayTransp
+            end)
+        end
+    end
+end
+
+track(RS.Heartbeat:Connect(function(dt)
+    if S.xrayOn then
+        xrayAcc = xrayAcc + dt
+        if xrayAcc >= 0.5 then
+            xrayAcc = 0
+            pcall(xrayScan)
+        end
+    elseif next(xrayCache) then
+        xrayRestore()
+    end
+end))
+
+local zoomSaved = nil
+local function zoomApply(on)
+    if on then
+        if not zoomSaved then
+            zoomSaved = LP.CameraMaxZoomDistance
+        end
+        pcall(function() LP.CameraMaxZoomDistance = S.zoomDist end)
+    else
+        if zoomSaved then
+            pcall(function() LP.CameraMaxZoomDistance = zoomSaved end)
+            zoomSaved = nil
+        end
+    end
+end
+
+task.defer(function()
+    if S.fullbrightOn then
+        pcall(function() applyFullbright(true) end)
+    end
+    if S.noFogOn then
+        pcall(function() applyNoFog(true) end)
+    end
+    if S.zoomHackOn then
+        pcall(function() zoomApply(true) end)
+    end
+end)
+-- ============ /WORLD MODULE ============
+
 -- ============ MOVEMENT + SERVER MODULE ============
 local flyBV, flyBG = nil, nil
 local noclipCache = {}
@@ -1555,6 +1759,12 @@ track(RS.Heartbeat:Connect(function()
                 hum.JumpPower = S.jpValue
             end
         end
+        if S.antiRagdollOn then
+            local st = hum:GetState()
+            if st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.FallingDown then
+                pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+            end
+        end
     end
 end))
 
@@ -1568,7 +1778,6 @@ track(UIS.JumpRequest:Connect(function()
     end
 end))
 
--- Anti-AFK
 local VU = game:GetService("VirtualUser")
 track(LP.Idled:Connect(function()
     if S.antiAfkOn then
@@ -1579,7 +1788,6 @@ track(LP.Idled:Connect(function()
     end
 end))
 
--- Auto-Rejoin
 local function rejoinServer()
     pcall(function()
         game:GetService("TeleportService"):Teleport(game.PlaceId, LP)
@@ -1609,7 +1817,6 @@ track(LP.OnTeleport:Connect(function(state)
     end
 end))
 
--- Server Hop
 local function serverHop()
     toast("Server Hop ...", CYAN)
     task.spawn(function()
@@ -1667,7 +1874,7 @@ local function serverHop()
 end
 -- ============ /MOVEMENT + SERVER MODULE ============
 
--- ============ HITBOX EXPANDER MODULE (part-keyed) ============
+-- ============ HITBOX EXPANDER MODULE ============
 local hbCache = {}
 hub.hbCache = hbCache
 
@@ -1718,6 +1925,95 @@ track(RS.Heartbeat:Connect(function()
 end))
 -- ============ /HITBOX EXPANDER ============
 
+-- ============ KILL AURA MODULE ============
+local kaAcc = 0
+track(RS.Heartbeat:Connect(function(dt)
+    if not S.killAuraOn then
+        kaAcc = 0
+        return
+    end
+    kaAcc = kaAcc + dt
+    if kaAcc < S.kaDelay then
+        return
+    end
+    kaAcc = 0
+    local myC = LP.Character
+    local myHrp = myC and myC:FindFirstChild("HumanoidRootPart")
+    local myHum = myC and myC:FindFirstChildOfClass("Humanoid")
+    if not (myC and myHrp and myHum and myHum.Health > 0) then
+        return
+    end
+    local inRange = false
+    for _, pl in ipairs(P:GetPlayers()) do
+        if not inRange and pl ~= LP then
+            if not (S.teamCheck and pl.Team ~= nil and pl.Team == LP.Team) then
+                local c = pl.Character
+                local hum = c and c:FindFirstChildOfClass("Humanoid")
+                local hrp = c and c:FindFirstChild("HumanoidRootPart")
+                if hum and hum.Health > 0 and hrp then
+                    if (hrp.Position - myHrp.Position).Magnitude <= S.kaRange then
+                        inRange = true
+                    end
+                end
+            end
+        end
+    end
+    if not inRange then
+        return
+    end
+    local tool = myC:FindFirstChildOfClass("Tool")
+    if not tool then
+        local bp = LP:FindFirstChild("Backpack")
+        tool = bp and bp:FindFirstChildOfClass("Tool")
+        if tool and myHum then
+            pcall(function() myHum:EquipTool(tool) end)
+        end
+    end
+    if tool then
+        pcall(function() tool:Activate() end)
+        task.delay(0.05, function()
+            pcall(function() tool:Deactivate() end)
+        end)
+    end
+end))
+-- ============ /KILL AURA ============
+
+-- ============ SILENT AIM MODULE (Namecall-Hook) ============
+local silentInstalled = false
+local function installSilentAim()
+    if silentInstalled then
+        return true
+    end
+    if type(getrawmetatable) ~= "function" or type(hookmetamethod) ~= "function" then
+        return false
+    end
+    local ok = pcall(function()
+        local oldNC = hookmetamethod(game, "__namecall", function(self, ...)
+            local m = getnamecallmethod()
+            if S.silentAimOn and (m == "FindPartOnRay" or m == "FindPartOnRayWithIgnoreList" or m == "FindPartOnRayWithWhitelist") then
+                local _, tpart = findTarget()
+                if tpart then
+                    local args = { ... }
+                    if typeof(args[1]) == "Ray" then
+                        local o = args[1].Origin
+                        local d = tpart.Position - o
+                        if d.Magnitude > 0.001 then
+                            args[1] = Ray.new(o, d.Unit * 5000)
+                            return oldNC(self, unpack(args))
+                        end
+                    end
+                end
+            end
+            return oldNC(self, ...)
+        end)
+        if oldNC then
+            silentInstalled = true
+        end
+    end)
+    return ok and silentInstalled
+end
+-- ============ /SILENT AIM ============
+
 -- ============ FPS BOOST MODULE ============
 local fpsSaved = nil
 local function fpsBoostApply(on)
@@ -1753,6 +2049,32 @@ local function fpsBoostApply(on)
             fpsSaved = nil
         end
     end
+end
+
+-- ============ PANIC MODULE ============
+local lockedPl = nil
+local function panicAll()
+    lockedPl = nil
+    local keys = {
+        "on", "trigOn", "tLockOn", "hbOn", "espOn", "chamsOn", "crossOn",
+        "filterOn", "fullbrightOn", "noFogOn", "xrayOn", "offArrowsOn",
+        "killAuraOn", "silentAimOn", "flyOn", "noclipOn", "clickTpOn",
+        "infJumpOn", "wsEnabled", "jpEnabled", "cardEspOn", "zoomHackOn",
+    }
+    for _, k in ipairs(keys) do
+        if S[k] then
+            if CTRLS[k] then
+                CTRLS[k].set(false, true)
+            else
+                S[k] = false
+            end
+        end
+    end
+    pcall(function() hbRestoreAll() end)
+    pcall(function() flyCleanup() end)
+    pcall(function() noclipRestore() end)
+    pcall(function() applyFilter() end)
+    toast("PANIC! Alles AUS", RED)
 end
 
 -- ============ CONFIG BUTTONS ============
@@ -2196,6 +2518,27 @@ addToggle(aimPage, "Hitbox Expander", "hbOn", true, function(v)
     end
 end)
 addSlider(aimPage, "Hitbox Größe", "hbSize", 4, 20, 1)
+addHeader(aimPage, "Kill Aura")
+addToggle(aimPage, "Kill Aura", "killAuraOn", true)
+addSlider(aimPage, "KA Radius", "kaRange", 5, 50, 1)
+addSlider(aimPage, "KA Delay", "kaDelay", 0.1, 3, 0.1, function(x) return string.format("%.1f", x) end)
+addHeader(aimPage, "Silent Aim")
+addToggle(aimPage, "Silent Aim", "silentAimOn", true, function(v, silent)
+    if v then
+        local ok = installSilentAim()
+        if not ok then
+            S.silentAimOn = false
+            if CTRLS["silentAimOn"] then
+                CTRLS["silentAimOn"].set(false, true)
+            end
+            if not silent then
+                toast("Silent Aim: Executor nicht unterstützt", RED)
+            end
+        elseif not silent then
+            toast("Silent Aim: Hook installiert", GRN)
+        end
+    end
+end)
 addHeader(aimPage, "Checks")
 addToggle(aimPage, "Team Check", "teamCheck", true)
 addToggle(aimPage, "Wall Check", "wallCheck", true)
@@ -2211,6 +2554,25 @@ addToggle(visPage, "Custom Crosshair", "crossOn", true)
 addSlider(visPage, "Crosshair Größe", "crossSize", 4, 30, 1)
 addSlider(visPage, "Crosshair Gap", "crossGap", 0, 15, 1)
 addSlider(visPage, "Crosshair Dicke", "crossThick", 1, 5, 1)
+addHeader(visPage, "World")
+addToggle(visPage, "Fullbright", "fullbrightOn", true, function()
+    pcall(function() applyFullbright(S.fullbrightOn) end)
+end)
+addToggle(visPage, "No Fog", "noFogOn", true, function()
+    pcall(function() applyNoFog(S.noFogOn) end)
+end)
+addToggle(visPage, "X-Ray (Wände transparent)", "xrayOn", true, function(v)
+    if not v then
+        pcall(function() xrayRestore() end)
+    end
+end)
+addSlider(visPage, "X-Ray Transparenz", "xrayTransp", 0.1, 1, 0.1, function(x) return string.format("%.1f", x) end)
+addToggle(visPage, "Off-Screen Pfeile", "offArrowsOn", true)
+addHeader(visPage, "Camera")
+addToggle(visPage, "Zoom-Hack", "zoomHackOn", true, function()
+    pcall(function() zoomApply(S.zoomHackOn) end)
+end)
+addSlider(visPage, "Zoom Distance", "zoomDist", 100, 2000, 10)
 
 addHeader(espPage, "Player ESP")
 addToggle(espPage, "ESP Master", "espOn", true)
@@ -2246,6 +2608,7 @@ addButton(filterPage, "Filter komplett AUS", function()
     toast("Filter aus", RED)
 end)
 
+local posSaved = nil
 addHeader(movePage, "Fly")
 addToggle(movePage, "Fly (WASD + Space)", "flyOn", true, function(v)
     if not v then
@@ -2261,6 +2624,27 @@ addToggle(movePage, "Noclip", "noclipOn", true, function(v)
 end)
 addToggle(movePage, "Infinite Jump", "infJumpOn", true)
 addToggle(movePage, "Click-TP", "clickTpOn", true)
+addToggle(movePage, "Anti-Ragdoll", "antiRagdollOn", true)
+addHeader(movePage, "Position")
+addButton(movePage, "Position speichern", function()
+    local myC = LP.Character
+    local my = myC and myC:FindFirstChild("HumanoidRootPart")
+    if my then
+        posSaved = my.Position
+        toast("Position gespeichert", GRN)
+    end
+end)
+addButton(movePage, "Position zurück", function()
+    local myC = LP.Character
+    local my = myC and myC:FindFirstChild("HumanoidRootPart")
+    if my and posSaved then
+        pushHistory("Save-Pos", my.Position)
+        my.CFrame = CFrame.new(posSaved + Vector3.new(0, 3, 0))
+        toast("Zurück zur Position", GRN)
+    else
+        toast("Keine Position gespeichert", RED)
+    end
+end)
 addHeader(movePage, "Speed / Jump")
 addToggle(movePage, "WalkSpeed aktiv", "wsEnabled", true, function(v)
     if not v then
@@ -2286,6 +2670,24 @@ addToggle(movePage, "JumpPower aktiv", "jpEnabled", true, function(v)
 end)
 addSlider(movePage, "JumpPower", "jpValue", 20, 300, 5)
 
+addHeader(plrPage, "Join Player")
+addInput(plrPage, "Name + Enter", "Username...", function(txt)
+    txt = string.lower(tostring(txt or ""))
+    if txt == "" then
+        return
+    end
+    for _, pl in ipairs(P:GetPlayers()) do
+        if pl ~= LP then
+            if string.sub(string.lower(pl.Name), 1, #txt) == txt
+                or string.sub(string.lower(pl.DisplayName), 1, #txt) == txt then
+                pcall(function() tpTo(pl) end)
+                toast("Join -> " .. pl.Name, GRN)
+                return
+            end
+        end
+    end
+    toast("Nicht im Server", RED)
+end)
 addHeader(plrPage, "Spieler Liste")
 buildPlayerList()
 
@@ -2326,6 +2728,7 @@ addHeader(setPage, "Hotkeys")
 addCycle(setPage, "GUI Taste", "guiKeyIdx", GUIKEY_NAMES)
 addCycle(setPage, "Free-Mouse Taste", "freeMouseIdx", FREEMOUSE_NAMES)
 addToggle(setPage, "Free Mouse (Maus lösen)", "freeMouseOn", true)
+addCycle(setPage, "🚨 Panic-Key", "panicKeyIdx", FEATURE_KEY_NAMES)
 addHeader(setPage, "Feature-Tasten")
 addCycle(setPage, "ESP", "espKeyIdx", FEATURE_KEY_NAMES)
 addCycle(setPage, "Chams", "chamsKeyIdx", FEATURE_KEY_NAMES)
@@ -2617,7 +3020,6 @@ do
     homeStatRow("Executor")
     homeStatRow("Position")
 
-    -- Teleport-History
     local homeHistHead = ni("TextLabel", {
         Size = UDim2.new(1, -16, 0, 20),
         BackgroundTransparency = 1,
@@ -2689,7 +3091,7 @@ do
     table.insert(themeAcc, { homeFeatHead, "TextColor3" })
 
     local homeGrid = ni("Frame", {
-        Size = UDim2.new(1, -16, 0, 164),
+        Size = UDim2.new(1, -16, 0, 232),
         BackgroundTransparency = 1,
         Parent = homePage,
     })
@@ -2699,7 +3101,7 @@ do
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = homeGrid,
     })
-    local homeFeats = { "🎯 AimLock", "🔫 Triggerbot", "👁️ ESP", "🧊 Chams", "📍 Waypoints", "🎞️ Filter", "🚀 Movement", "🃏 Card ESP", "🎯 TargetLock", "📐 Hitbox" }
+    local homeFeats = { "🎯 AimLock", "🔫 Triggerbot", "👁️ ESP", "🧊 Chams", "📍 Waypoints", "🎞️ Filter", "🚀 Movement", "🃏 Card ESP", "🎯 TargetLock", "📐 Hitbox", "⚔️ Kill Aura", "💫 Silent Aim", "☀️ Fullbright", "🛡️ Panic-Key" }
     for _, f in ipairs(homeFeats) do
         local b = ni("Frame", {
             BackgroundColor3 = BG2,
@@ -2732,7 +3134,7 @@ do
     ni("TextLabel", {
         Size = UDim2.new(1, -16, 0, 40),
         BackgroundTransparency = 1,
-        Text = "NanoHub v1.30  •  Avatar-Klick = Theme\nHotkeys & Einstellungen: Settings-Tab",
+        Text = "NanoHub v1.31  •  Avatar-Klick = Theme\nHotkeys & Einstellungen: Settings-Tab",
         TextColor3 = SUB,
         Font = Enum.Font.Gotham,
         TextSize = 12,
@@ -2989,6 +3391,12 @@ closeBtn.MouseButton1Click:Connect(function()
             pcall(function() d:Remove() end)
         end
     end
+    for i = 1, 8 do
+        local d = arrowDraws[i]
+        if d then
+            pcall(function() d:Remove() end)
+        end
+    end
     for _, d in pairs(hub.wpDraws or {}) do
         pcall(function()
             if d then
@@ -3002,6 +3410,10 @@ closeBtn.MouseButton1Click:Connect(function()
     pcall(function() flyCleanup() end)
     pcall(function() noclipRestore() end)
     pcall(function() hbRestoreAll() end)
+    pcall(function() xrayRestore() end)
+    pcall(function() applyFullbright(false) end)
+    pcall(function() applyNoFog(false) end)
+    pcall(function() zoomApply(false) end)
     pcall(function() fpsBoostApply(false) end)
     pcall(function()
         local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
@@ -3035,7 +3447,6 @@ end)
 -- ============ KEYBINDS ============
 local trigNext = 0
 local trigHeld = false
-local lockedPl = nil
 
 track(UIS.InputEnded:Connect(function(inp)
     if inp.KeyCode == KEYCODES[S.tLockKeyIdx] and lockedPl then
@@ -3084,6 +3495,8 @@ track(UIS.InputBegan:Connect(function(inp, g)
         else
             toast("Free Mouse AUS", RED)
         end
+    elseif S.panicKeyIdx > 1 and inp.KeyCode == FEATURE_KEY_CODES[S.panicKeyIdx] and inp.KeyCode ~= curKey() then
+        panicAll()
     elseif S.tLockOn and inp.KeyCode == KEYCODES[S.tLockKeyIdx] then
         local tp1 = findTarget()
         if tp1 then
@@ -3233,6 +3646,75 @@ track(RS.RenderStepped:Connect(function()
             for i = 1, 5 do
                 if crossDraws[i] then
                     pcall(function() crossDraws[i].Visible = false end)
+                end
+            end
+        end
+    end
+    -- Off-Screen Pfeile
+    if canDraw then
+        if S.offArrowsOn and v then
+            local idx = 0
+            local w2, h2 = v.ViewportSize.X / 2, v.ViewportSize.Y / 2
+            for _, pl in ipairs(P:GetPlayers()) do
+                if idx >= 8 then
+                    break
+                end
+                if pl ~= LP then
+                    local c = pl.Character
+                    local hrp = c and c:FindFirstChild("HumanoidRootPart")
+                    local hum = c and c:FindFirstChildOfClass("Humanoid")
+                    if hrp and hum and hum.Health > 0 then
+                        if not (S.teamCheck and pl.Team ~= nil and pl.Team == LP.Team) then
+                            local sp, onS = v:WorldToViewportPoint(hrp.Position)
+                            local dx, dy
+                            if sp.Z <= 0 then
+                                dx = w2 - sp.X
+                                dy = h2 - sp.Y
+                            else
+                                dx = sp.X - w2
+                                dy = sp.Y - h2
+                            end
+                            local inside = sp.Z > 0 and math.abs(sp.X - w2) < w2 and math.abs(sp.Y - h2) < h2
+                            if not inside and (math.abs(dx) > 0.001 or math.abs(dy) > 0.001) then
+                                idx = idx + 1
+                                local d = arrowDraws[idx]
+                                if not d then
+                                    d = Drawing.new("Triangle")
+                                    d.Filled = true
+                                    d.Thickness = 1
+                                    arrowDraws[idx] = d
+                                end
+                                local mag = math.sqrt(dx * dx + dy * dy)
+                                local ux, uy = dx / mag, dy / mag
+                                local sx = w2 - 40
+                                local sy = h2 - 40
+                                local axu, ayu = math.abs(ux), math.abs(uy)
+                                local k = math.min(axu > 1e-6 and sx / axu or 1e9, ayu > 1e-6 and sy / ayu or 1e9)
+                                local tx = w2 + ux * k
+                                local ty = h2 + uy * k
+                                local col = drawColor()
+                                if S.espTeamCol and pl.Team then
+                                    col = pl.Team.TeamColor.Color
+                                end
+                                d.Color = col
+                                d.PointA = Vector2.new(tx + ux * 10, ty + uy * 10)
+                                d.PointB = Vector2.new(tx - uy * 6, ty + ux * 6)
+                                d.PointC = Vector2.new(tx + uy * 6, ty - ux * 6)
+                                d.Visible = true
+                            end
+                        end
+                    end
+                end
+            end
+            for i = idx + 1, 8 do
+                if arrowDraws[i] then
+                    pcall(function() arrowDraws[i].Visible = false end)
+                end
+            end
+        else
+            for i = 1, 8 do
+                if arrowDraws[i] then
+                    pcall(function() arrowDraws[i].Visible = false end)
                 end
             end
         end
@@ -3640,4 +4122,4 @@ track(P.PlayerRemoving:Connect(function(pl)
 end))
 
 showTab("Home")
-print("[NanoHub] AimLock v1.30 ready  -  Home + AimLock + TargetLock + Hitbox-Expander + Triggerbot + ESP + Card-ESP + Crosshair + Filter + Movement + Anti-AFK + Auto-Rejoin + Server Hop + Hotkeys + Mini-Mode + GUI-Scale + FPS-Boost + Profiles + AutoSave + TP-History + Themes + Config")
+print("[NanoHub] AimLock v1.31 ready  -  Home + AimLock + TargetLock + Hitbox + KillAura + SilentAim + Triggerbot + ESP + Card-ESP + Crosshair + Fullbright/NoFog/XRay + OffArrows + Zoom + Filter + Movement + Anti-Ragdoll + PosSave + JoinPlayer + Panic-Key + Anti-AFK + Auto-Rejoin + Server Hop + Mini-Mode + GUI-Scale + FPS-Boost + Profiles + AutoSave + TP-History + Themes + Config")
