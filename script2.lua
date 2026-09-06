@@ -1,4 +1,4 @@
-print("[NanoHub] AimLock v1.28 === START ===")
+print("[NanoHub] AimLock v1.29 === START ===")
 
 local P = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -78,6 +78,18 @@ if hub.wpDraws then
 end
 hub.wpDraws = nil
 
+if hub.cardDraws then
+    for _, d in pairs(hub.cardDraws) do
+        pcall(function()
+            if d then
+                if d.dot then d.dot:Remove() end
+                if d.lbl then d.lbl:Remove() end
+            end
+        end)
+    end
+end
+hub.cardDraws = nil
+
 if hub.espCache then
     for _, e in pairs(hub.espCache) do
         pcall(function()
@@ -105,6 +117,19 @@ for _, n in ipairs({ "NanoCC", "NanoBloom", "NanoSun" }) do
     local e = Lighting:FindFirstChild(n)
     if e then
         pcall(function() e:Destroy() end)
+    end
+end
+
+do
+    local c0 = LP.Character
+    local hrp0 = c0 and c0:FindFirstChild("HumanoidRootPart")
+    if hrp0 then
+        for _, n in ipairs({ "NanoHubFlyBV", "NanoHubFlyBG" }) do
+            local e = hrp0:FindFirstChild(n)
+            if e then
+                pcall(function() e:Destroy() end)
+            end
+        end
     end
 end
 
@@ -182,6 +207,19 @@ local S = {
     fBright = 0.01,
     fBloom = 0.25,
     fSunRays = 0.08,
+    flyOn = false,
+    flySpeed = 60,
+    noclipOn = false,
+    infJumpOn = false,
+    clickTpOn = false,
+    wsEnabled = false,
+    wsValue = 16,
+    jpEnabled = false,
+    jpValue = 50,
+    antiAfkOn = true,
+    autoRejoinOn = false,
+    cardEspOn = false,
+    cardMaxD = 2000,
 }
 
 -- ============ THEMES ============
@@ -243,6 +281,10 @@ local CFG_CLAMPS = {
     fBright = { -0.5, 0.5 },
     fBloom = { 0, 2 },
     fSunRays = { 0, 0.5 },
+    flySpeed = { 10, 300 },
+    wsValue = { 8, 200 },
+    jpValue = { 20, 300 },
+    cardMaxD = { 100, 5000 },
 }
 
 local function applyConfig(d)
@@ -250,7 +292,9 @@ local function applyConfig(d)
         return false
     end
     for k, v in pairs(d) do
-        if k ~= "on" and S[k] ~= nil and type(v) == type(S[k]) then
+        if k ~= "on" and k ~= "flyOn" and k ~= "noclipOn" and k ~= "clickTpOn"
+            and k ~= "infJumpOn" and k ~= "wsEnabled" and k ~= "jpEnabled"
+            and S[k] ~= nil and type(v) == type(S[k]) then
             local c = CFG_CLAMPS[k]
             if c then
                 S[k] = clamp(v, c[1], c[2])
@@ -671,7 +715,7 @@ local sub = ni("TextLabel", {
     Position = UDim2.new(0, 14, 0, 25),
     Size = UDim2.new(0, 220, 0, 14),
     BackgroundTransparency = 1,
-    Text = "AimLock v1.28  •  " .. LP.DisplayName,
+    Text = "AimLock v1.29  •  " .. LP.DisplayName,
     TextColor3 = SUB,
     TextXAlignment = Enum.TextXAlignment.Left,
     Font = Enum.Font.Gotham,
@@ -763,7 +807,7 @@ local sidebar = ni("Frame", {
     Parent = win,
 })
 
-local TAB_NAMES = { "Home", "AimLock", "Visuals", "ESP", "Filter", "Players", "Waypoints", "Settings" }
+local TAB_NAMES = { "Home", "AimLock", "Visuals", "ESP", "Filter", "Movement", "Players", "Waypoints", "Settings" }
 local tabBtns = {}
 local tabAcc = {}
 for i = 1, #TAB_NAMES do
@@ -821,9 +865,10 @@ local aimPage     = pages[2]
 local visPage     = pages[3]
 local espPage     = pages[4]
 local filterPage  = pages[5]
-local plrPage     = pages[6]
-local wpPage      = pages[7]
-local setPage     = pages[8]
+local movePage    = pages[6]
+local plrPage     = pages[7]
+local wpPage      = pages[8]
+local setPage     = pages[9]
 
 local function showTab(name)
     local idx = 1
@@ -860,7 +905,7 @@ ni("TextLabel", {
     Position = UDim2.new(0, 10, 0, 0),
     Size = UDim2.new(1, -20, 1, 0),
     BackgroundTransparency = 1,
-    Text = "Hotkeys: Settings-Tab  •  v1.28",
+    Text = "Hotkeys: Settings-Tab  •  v1.29",
     TextColor3 = SUB,
     Font = Enum.Font.Gotham,
     TextSize = 11,
@@ -1240,6 +1285,207 @@ if S.filterOn then
     applyFilter()
 end
 
+-- ============ MOVEMENT + SERVER MODULE ============
+local flyBV, flyBG = nil, nil
+local noclipCache = {}
+local lastNoclipChar = nil
+
+local function noclipRestore()
+    for part, v in pairs(noclipCache) do
+        pcall(function()
+            if part and part.Parent then
+                part.CanCollide = v
+            end
+        end)
+    end
+    table.clear(noclipCache)
+    lastNoclipChar = nil
+end
+
+local function flyCleanup()
+    pcall(function() if flyBV then flyBV:Destroy() end end)
+    pcall(function() if flyBG then flyBG:Destroy() end end)
+    flyBV = nil
+    flyBG = nil
+end
+
+track(RS.Heartbeat:Connect(function()
+    local c = LP.Character
+    local hum = c and c:FindFirstChildOfClass("Humanoid")
+    local hrp = c and c:FindFirstChild("HumanoidRootPart")
+    if S.flyOn and hrp and hum and hum.Health > 0 then
+        if not flyBV or flyBV.Parent ~= hrp then
+            flyCleanup()
+            flyBV = Instance.new("BodyVelocity")
+            flyBV.Name = "NanoHubFlyBV"
+            flyBV.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+            flyBV.Velocity = Vector3.new(0, 0, 0)
+            flyBV.Parent = hrp
+            flyBG = Instance.new("BodyGyro")
+            flyBG.Name = "NanoHubFlyBG"
+            flyBG.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+            flyBG.P = 9e4
+            flyBG.D = 500
+            flyBG.Parent = hrp
+        end
+        local cam = workspace.CurrentCamera
+        local move = Vector3.new(0, 0, 0)
+        if cam then
+            if UIS:IsKeyDown(Enum.KeyCode.W) then move = move + cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then move = move - cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then move = move + cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then move = move - cam.CFrame.RightVector end
+        end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, 1, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then move = move - Vector3.new(0, 1, 0) end
+        if move.Magnitude > 0.01 then
+            move = move.Unit
+        end
+        flyBV.Velocity = move * S.flySpeed
+        if cam then
+            flyBG.CFrame = CFrame.new(cam.CFrame.Position, cam.CFrame.Position + cam.CFrame.LookVector)
+        end
+    elseif flyBV then
+        flyCleanup()
+    end
+    if S.noclipOn and c then
+        if lastNoclipChar ~= c then
+            table.clear(noclipCache)
+            lastNoclipChar = c
+        end
+        for _, p in ipairs(c:GetDescendants()) do
+            if p:IsA("BasePart") then
+                if noclipCache[p] == nil then
+                    noclipCache[p] = p.CanCollide
+                end
+                p.CanCollide = false
+            end
+        end
+    end
+    if hum then
+        if S.wsEnabled and hum.WalkSpeed ~= S.wsValue then
+            hum.WalkSpeed = S.wsValue
+        end
+        if S.jpEnabled then
+            if not hum.UseJumpPower then
+                hum.UseJumpPower = true
+            end
+            if hum.JumpPower ~= S.jpValue then
+                hum.JumpPower = S.jpValue
+            end
+        end
+    end
+end))
+
+track(UIS.JumpRequest:Connect(function()
+    if S.infJumpOn then
+        local c = LP.Character
+        local hum = c and c:FindFirstChildOfClass("Humanoid")
+        if hum and hum.Health > 0 then
+            pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+        end
+    end
+end))
+
+-- Anti-AFK
+local VU = game:GetService("VirtualUser")
+track(LP.Idled:Connect(function()
+    if S.antiAfkOn then
+        pcall(function()
+            VU:CaptureController()
+            VU:ClickButton2(Vector2.new(0, 0))
+        end)
+    end
+end))
+
+-- Auto-Rejoin
+local function rejoinServer()
+    pcall(function()
+        game:GetService("TeleportService"):Teleport(game.PlaceId, LP)
+    end)
+end
+task.spawn(function()
+    pcall(function()
+        local coreGui = game:GetService("CoreGui")
+        local rpg = coreGui:FindFirstChild("RobloxPromptGui")
+        local overlay = rpg and rpg:FindFirstChild("promptOverlay")
+        if overlay then
+            overlay.ChildAdded:Connect(function(child)
+                if S.autoRejoinOn and child.Name == "ErrorPrompt" then
+                    task.delay(3, function()
+                        rejoinServer()
+                    end)
+                end
+            end)
+        end
+    end)
+end)
+track(LP.OnTeleport:Connect(function(state)
+    if state == Enum.TeleportState.Failed and S.autoRejoinOn then
+        task.delay(1, function()
+            rejoinServer()
+        end)
+    end
+end))
+
+-- Server Hop
+local function serverHop()
+    toast("Server Hop ...", CYAN)
+    task.spawn(function()
+        local reqFn = nil
+        pcall(function()
+            if type(http_request) == "function" then
+                reqFn = http_request
+            elseif type(http) == "table" and type(http.request) == "function" then
+                reqFn = http.request
+            elseif type(syn) == "table" and type(syn.request) == "function" then
+                reqFn = syn.request
+            elseif type(request) == "function" then
+                reqFn = request
+            end
+        end)
+        if not reqFn then
+            toast("Kein request verfügbar", RED)
+            return
+        end
+        local ok, resp = pcall(function()
+            return reqFn({
+                Url = "https://games.roblox.com/v1/games/" .. tostring(game.PlaceId) .. "/servers/Public?limit=100",
+                Method = "GET",
+            })
+        end)
+        if not ok then
+            toast("Hop fehlgeschlagen", RED)
+            return
+        end
+        local body = (type(resp) == "table" and resp.Body) or resp
+        local ok2, data = pcall(function()
+            return HS:JSONDecode(body)
+        end)
+        if not ok2 or type(data) ~= "table" or type(data.data) ~= "table" then
+            toast("Hop fehlgeschlagen", RED)
+            return
+        end
+        local candidates = {}
+        for _, sv in ipairs(data.data) do
+            if type(sv) == "table" and sv.id and sv.id ~= game.JobId then
+                if (tonumber(sv.playing) or 0) < (tonumber(sv.maxPlayers) or 50) then
+                    table.insert(candidates, sv.id)
+                end
+            end
+        end
+        if #candidates == 0 then
+            toast("Kein Server gefunden", RED)
+            return
+        end
+        local pick = candidates[math.random(1, #candidates)]
+        pcall(function()
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, pick, LP)
+        end)
+    end)
+end
+-- ============ /MOVEMENT + SERVER MODULE ============
+
 -- ============ CONFIG BUTTONS ============
 local function saveConfigFull()
     if not canFS then
@@ -1526,6 +1772,133 @@ local function buildWpList()
     end
 end
 
+-- ============ CARD ESP MODULE ============
+local CARD_KEYWORDS = { "card", "pack", "booster", "crate", "egg" }
+local CARD_RARITY = {
+    { "secret", Color3.fromRGB(255, 60, 60) },
+    { "mythic", Color3.fromRGB(255, 80, 200) },
+    { "godly",  Color3.fromRGB(170, 170, 185) },
+    { "legend", Color3.fromRGB(255, 160, 60) },
+    { "epic",   Color3.fromRGB(170, 80, 255) },
+    { "rare",   Color3.fromRGB(60, 140, 255) },
+    { "shiny",  Color3.fromRGB(60, 255, 220) },
+    { "common", Color3.fromRGB(150, 150, 150) },
+}
+local cardEntries = {}
+local cardDraws = {}
+hub.cardDraws = cardDraws
+local cardScanAcc = 0
+
+local function cardColorFor(name)
+    local low = string.lower(name)
+    for _, r in ipairs(CARD_RARITY) do
+        if string.find(low, r[1], 1, true) then
+            return r[2]
+        end
+    end
+    return nil
+end
+
+local function cardScan()
+    local nxt = {}
+    local count = 0
+    for _, inst in ipairs(workspace:GetDescendants()) do
+        if count >= 40 then
+            break
+        end
+        if inst:IsA("BasePart") or inst:IsA("Model") then
+            local low = string.lower(inst.Name)
+            local matched = false
+            for _, k in ipairs(CARD_KEYWORDS) do
+                if string.find(low, k, 1, true) then
+                    matched = true
+                    break
+                end
+            end
+            if matched and not string.find(low, "backpack", 1, true) then
+                local part
+                if inst:IsA("BasePart") then
+                    part = inst
+                else
+                    part = inst.PrimaryPart or inst:FindFirstChildWhichIsA("BasePart", true)
+                end
+                if part then
+                    count = count + 1
+                    nxt[count] = { part = part, name = inst.Name, col = cardColorFor(inst.Name) or ACC }
+                end
+            end
+        end
+    end
+    cardEntries = nxt
+end
+
+track(RS.Heartbeat:Connect(function(dt)
+    if S.cardEspOn then
+        cardScanAcc = cardScanAcc + dt
+        if cardScanAcc >= 0.5 then
+            cardScanAcc = 0
+            cardScan()
+        end
+    elseif #cardEntries > 0 then
+        cardEntries = {}
+    end
+end))
+
+track(RS.RenderStepped:Connect(function()
+    local v = workspace.CurrentCamera
+    if not (S.cardEspOn and canDraw and v) then
+        for i = 1, 40 do
+            local d = cardDraws[i]
+            if d then
+                pcall(function()
+                    d.dot.Visible = false
+                    d.lbl.Visible = false
+                end)
+            end
+        end
+        return
+    end
+    local myC = LP.Character
+    local myHrp = myC and myC:FindFirstChild("HumanoidRootPart")
+    for i = 1, 40 do
+        local e = cardEntries[i]
+        local d = cardDraws[i]
+        if not d then
+            d = { dot = Drawing.new("Circle"), lbl = Drawing.new("Text") }
+            d.dot.Thickness = 1
+            d.dot.NumSides = 10
+            d.dot.Filled = true
+            d.dot.Radius = 4
+            d.lbl.Size = 13
+            d.lbl.Center = true
+            d.lbl.Outline = true
+            cardDraws[i] = d
+        end
+        local drawn = false
+        if e and e.part and e.part.Parent then
+            local dist = myHrp and (e.part.Position - myHrp.Position).Magnitude or 0
+            if dist <= S.cardMaxD then
+                local sp, onS = v:WorldToViewportPoint(e.part.Position)
+                if onS and sp.Z > 0 then
+                    drawn = true
+                    d.dot.Color = e.col
+                    d.dot.Position = Vector2.new(sp.X, sp.Y)
+                    d.dot.Visible = true
+                    d.lbl.Color = e.col
+                    d.lbl.Text = e.name .. " (" .. string.format("%.0f", dist) .. "m)"
+                    d.lbl.Position = Vector2.new(sp.X, sp.Y - 14)
+                    d.lbl.Visible = true
+                end
+            end
+        end
+        if not drawn then
+            d.dot.Visible = false
+            d.lbl.Visible = false
+        end
+    end
+end))
+-- ============ /CARD ESP MODULE ============
+
 -- ============ TABS ============
 addHeader(aimPage, "Core")
 local aimSet = nil
@@ -1566,6 +1939,9 @@ addToggle(espPage, "Name + Distance", "espName", true)
 addToggle(espPage, "Skeleton", "espSkel", true)
 addToggle(espPage, "Tracer", "espTracer", true)
 addSlider(espPage, "Max Distance", "espMaxD", 100, 5000, 100)
+addHeader(espPage, "Card ESP")
+addToggle(espPage, "Card / Pack ESP", "cardEspOn", true)
+addSlider(espPage, "Card Max Distance", "cardMaxD", 100, 5000, 100)
 
 addHeader(filterPage, "Realistic Filter")
 addToggle(filterPage, "Filter AN", "filterOn", true, function() applyFilter() end)
@@ -1584,6 +1960,46 @@ addButton(filterPage, "Filter komplett AUS", function()
     applyFilter()
     toast("Filter aus", RED)
 end)
+
+addHeader(movePage, "Fly")
+addToggle(movePage, "Fly (WASD + Space)", "flyOn", true, function(v)
+    if not v then
+        pcall(function() flyCleanup() end)
+    end
+end)
+addSlider(movePage, "Fly Speed", "flySpeed", 10, 300, 10)
+addHeader(movePage, "Movement")
+addToggle(movePage, "Noclip", "noclipOn", true, function(v)
+    if not v then
+        pcall(function() noclipRestore() end)
+    end
+end)
+addToggle(movePage, "Infinite Jump", "infJumpOn", true)
+addToggle(movePage, "Click-TP", "clickTpOn", true)
+addHeader(movePage, "Speed / Jump")
+addToggle(movePage, "WalkSpeed aktiv", "wsEnabled", true, function(v)
+    if not v then
+        pcall(function()
+            local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if h then
+                h.WalkSpeed = 16
+            end
+        end)
+    end
+end)
+addSlider(movePage, "WalkSpeed", "wsValue", 8, 200, 1)
+addToggle(movePage, "JumpPower aktiv", "jpEnabled", true, function(v)
+    if not v then
+        pcall(function()
+            local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if h then
+                h.UseJumpPower = true
+                h.JumpPower = 50
+            end
+        end)
+    end
+end)
+addSlider(movePage, "JumpPower", "jpValue", 20, 300, 5)
 
 addHeader(plrPage, "Spieler Liste")
 buildPlayerList()
@@ -1611,6 +2027,10 @@ addHeader(setPage, "Hotkeys")
 addCycle(setPage, "GUI Taste", "guiKeyIdx", GUIKEY_NAMES)
 addCycle(setPage, "Free-Mouse Taste", "freeMouseIdx", FREEMOUSE_NAMES)
 addToggle(setPage, "Free Mouse (Maus lösen)", "freeMouseOn", true)
+addHeader(setPage, "Server")
+addToggle(setPage, "Anti-AFK", "antiAfkOn", false)
+addToggle(setPage, "Auto-Rejoin bei Kick", "autoRejoinOn", true)
+addButton(setPage, "Server Hop (neuer Server)", serverHop)
 addHeader(setPage, "Start")
 addToggle(setPage, "Fast Start (Splash überspringen)", "fastStart", true, function(v, silent)
     if not silent then
@@ -1651,7 +2071,6 @@ do
         end
     end)
 
-    -- 🖱️ Avatar-Klick = nächstes Theme
     homeAvatar.MouseButton1Click:Connect(function()
         S.themeIdx = (S.themeIdx % #THEMES) + 1
         if CTRLS["themeIdx"] then
@@ -1705,7 +2124,6 @@ do
         Parent = homeAvatarCard,
     })
 
-    -- ⭐ EFFECT 1: Pulsierender Avatar-Rahmen
     task.spawn(function()
         while homeAvatar and homeAvatar.Parent do
             pcall(function()
@@ -1768,7 +2186,6 @@ do
         Parent = homeBanner,
     })
 
-    -- ⭐ EFFECT 2: Gradient wandert
     task.spawn(function()
         while homeBanner and homeBanner.Parent do
             pcall(function()
@@ -1783,7 +2200,6 @@ do
         end
     end)
 
-    -- ⭐ EFFECT 3: Shimmer-Sweep
     task.spawn(function()
         task.wait(1.3)
         while homeBanner and homeBanner.Parent do
@@ -1834,7 +2250,6 @@ do
     })
     ni("UICorner", { CornerRadius = UDim.new(1, 0), Parent = homeLiveDot })
 
-    -- ⭐ EFFECT 4: LIVE-Dot pulsiert
     task.spawn(function()
         while homeLiveDot and homeLiveDot.Parent do
             pcall(function()
@@ -1903,7 +2318,7 @@ do
     table.insert(themeAcc, { homeFeatHead, "TextColor3" })
 
     local homeGrid = ni("Frame", {
-        Size = UDim2.new(1, -16, 0, 96),
+        Size = UDim2.new(1, -16, 0, 130),
         BackgroundTransparency = 1,
         Parent = homePage,
     })
@@ -1913,7 +2328,7 @@ do
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = homeGrid,
     })
-    local homeFeats = { "🎯 AimLock", "🔫 Triggerbot", "👁️ ESP", "🧊 Chams", "📍 Waypoints", "🎞️ Filter" }
+    local homeFeats = { "🎯 AimLock", "🔫 Triggerbot", "👁️ ESP", "🧊 Chams", "📍 Waypoints", "🎞️ Filter", "🚀 Movement", "🃏 Card ESP" }
     for _, f in ipairs(homeFeats) do
         local b = ni("Frame", {
             BackgroundColor3 = BG2,
@@ -1946,7 +2361,7 @@ do
     ni("TextLabel", {
         Size = UDim2.new(1, -16, 0, 40),
         BackgroundTransparency = 1,
-        Text = "NanoHub v1.28  •  Avatar-Klick = Theme\nHotkeys & Einstellungen: Settings-Tab",
+        Text = "NanoHub v1.29  •  Avatar-Klick = Theme\nHotkeys & Einstellungen: Settings-Tab",
         TextColor3 = SUB,
         Font = Enum.Font.Gotham,
         TextSize = 12,
@@ -2197,6 +2612,25 @@ closeBtn.MouseButton1Click:Connect(function()
     end
     hub.wpDraws = nil
     espClearAll()
+    pcall(function() flyCleanup() end)
+    pcall(function() noclipRestore() end)
+    pcall(function()
+        local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        if h then
+            h.WalkSpeed = 16
+            h.UseJumpPower = true
+            h.JumpPower = 50
+        end
+    end)
+    for i = 1, 40 do
+        local d = cardDraws[i]
+        if d then
+            pcall(function()
+                d.dot:Remove()
+                d.lbl:Remove()
+            end)
+        end
+    end
     for _, n in ipairs({ "NanoCC", "NanoBloom", "NanoSun" }) do
         local e = Lighting:FindFirstChild(n)
         if e then
@@ -2210,8 +2644,33 @@ closeBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ============ KEYBINDS ============
+local trigNext = 0
+local trigHeld = false
 track(UIS.InputBegan:Connect(function(inp, g)
     if g then
+        return
+    end
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 and S.clickTpOn and not trigHeld then
+        local cam = workspace.CurrentCamera
+        local myC = LP.Character
+        local myHrp = myC and myC:FindFirstChild("HumanoidRootPart")
+        if cam and myHrp then
+            local params = RaycastParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            local ex = {}
+            if myC then
+                table.insert(ex, myC)
+            end
+            if ui then
+                table.insert(ex, ui)
+            end
+            params.FilterDescendantsInstances = ex
+            local ray = cam:ScreenPointToRay(M.X, M.Y)
+            local hit = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+            local pos = hit and hit.Position or (ray.Origin + ray.Direction * 200)
+            myHrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+            toast("Click-TP", GRN)
+        end
         return
     end
     if inp.KeyCode == GUIKEY_CODES[S.guiKeyIdx] then
@@ -2234,8 +2693,6 @@ track(UIS.InputBegan:Connect(function(inp, g)
 end))
 
 -- ============ MAIN LOOP (AIMBOT) ============
-local trigNext = 0
-local trigHeld = false
 track(RS.RenderStepped:Connect(function()
     local v = workspace.CurrentCamera
     local myC = LP.Character
@@ -2350,9 +2807,9 @@ track(RS.RenderStepped:Connect(function()
                 if type(mouse1press) == "function" then
                     mouse1press()
                 else
-                    local VU = game:GetService("VirtualUser")
-                    VU:CaptureController()
-                    VU:Button1Down(Vector2.new(0, 0))
+                    local VU2 = game:GetService("VirtualUser")
+                    VU2:CaptureController()
+                    VU2:Button1Down(Vector2.new(0, 0))
                 end
             end)
             task.delay(0.1, function()
@@ -2360,8 +2817,8 @@ track(RS.RenderStepped:Connect(function()
                     if type(mouse1release) == "function" then
                         mouse1release()
                     else
-                        local VU = game:GetService("VirtualUser")
-                        VU:Button1Up(Vector2.new(0, 0))
+                        local VU2 = game:GetService("VirtualUser")
+                        VU2:Button1Up(Vector2.new(0, 0))
                     end
                 end)
                 trigHeld = false
@@ -2699,4 +3156,4 @@ track(P.PlayerRemoving:Connect(function(pl)
 end))
 
 showTab("Home")
-print("[NanoHub] AimLock v1.28 ready  -  Home (Anim + Avatar-Theme-Klick) + AimLock + Triggerbot + ESP + Chams + Filter (Realistic) + Player-List + Waypoints + Hotkeys + FreeMouse + Fast Start + Themes + Config")
+print("[NanoHub] AimLock v1.29 ready  -  Home + AimLock + Triggerbot + ESP + Card-ESP + Filter + Movement (Fly/Noclip/InfJump/ClickTP/WS/JP) + Anti-AFK + Auto-Rejoin + Server Hop + Player-List + Waypoints + Hotkeys + FreeMouse + Fast Start + Themes + Config")
