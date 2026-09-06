@@ -1,4 +1,4 @@
-print("[NanoHub] AimLock v1.29 === START ===")
+print("[NanoHub] AimLock v1.30 === START ===")
 
 local P = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -89,6 +89,17 @@ if hub.cardDraws then
     end
 end
 hub.cardDraws = nil
+
+if hub.hbCache then
+    for part, size in pairs(hub.hbCache) do
+        pcall(function()
+            if part and part.Parent then
+                part.Size = size
+            end
+        end)
+    end
+end
+hub.hbCache = nil
 
 if hub.espCache then
     for _, e in pairs(hub.espCache) do
@@ -220,35 +231,75 @@ local S = {
     autoRejoinOn = false,
     cardEspOn = false,
     cardMaxD = 2000,
+    hbOn = false,
+    hbSize = 8,
+    tLockOn = false,
+    tLockKeyIdx = 2,
+    crossOn = false,
+    crossSize = 10,
+    crossGap = 4,
+    crossThick = 2,
+    uiScale = 1,
+    fpsBoostOn = false,
+    profileIdx = 1,
+    autoSaveAll = false,
+    espKeyIdx = 1,
+    chamsKeyIdx = 1,
+    flyKeyIdx = 1,
+    noclipKeyIdx = 1,
+    infKeyIdx = 1,
+    tpKeyIdx = 1,
+    trigKeyIdx = 1,
 }
 
 -- ============ THEMES ============
 local THEMES = {
-    { name = "Purple", acc = Color3.fromRGB(150, 100, 255), cyan = Color3.fromRGB(90, 200, 255) },
-    { name = "Blue",   acc = Color3.fromRGB(70, 150, 255),  cyan = Color3.fromRGB(120, 220, 255) },
-    { name = "Red",    acc = Color3.fromRGB(255, 90, 90),   cyan = Color3.fromRGB(255, 160, 120) },
-    { name = "Green",  acc = Color3.fromRGB(80, 220, 140),  cyan = Color3.fromRGB(150, 255, 200) },
-    { name = "Orange", acc = Color3.fromRGB(255, 150, 60),  cyan = Color3.fromRGB(255, 210, 120) },
-    { name = "Pink",   acc = Color3.fromRGB(255, 100, 180), cyan = Color3.fromRGB(255, 170, 220) },
+    { name = "Purple",  acc = Color3.fromRGB(150, 100, 255), cyan = Color3.fromRGB(90, 200, 255) },
+    { name = "Blue",    acc = Color3.fromRGB(70, 150, 255),  cyan = Color3.fromRGB(120, 220, 255) },
+    { name = "Red",     acc = Color3.fromRGB(255, 90, 90),   cyan = Color3.fromRGB(255, 160, 120) },
+    { name = "Green",   acc = Color3.fromRGB(80, 220, 140),  cyan = Color3.fromRGB(150, 255, 200) },
+    { name = "Orange",  acc = Color3.fromRGB(255, 150, 60),  cyan = Color3.fromRGB(255, 210, 120) },
+    { name = "Pink",    acc = Color3.fromRGB(255, 100, 180), cyan = Color3.fromRGB(255, 170, 220) },
+    { name = "Rainbow", acc = Color3.fromRGB(150, 100, 255), cyan = Color3.fromRGB(90, 200, 255) },
 }
-local THEME_NAMES = { "Purple", "Blue", "Red", "Green", "Orange", "Pink" }
+local THEME_NAMES = { "Purple", "Blue", "Red", "Green", "Orange", "Pink", "Rainbow" }
 
 local themeAcc = {}
 local gradRepaints = {}
+local rainbowToken = 0
 local function setThemeVars(i)
-    local t = THEMES[clamp(i, 1, #THEMES)]
-    if not t then
-        return
-    end
-    ACC = t.acc
-    CYAN = t.cyan
-    for _, r in ipairs(themeAcc) do
-        pcall(function()
-            r[1][r[2]] = ACC
+    local idx = clamp(i, 1, #THEMES)
+    rainbowToken = rainbowToken + 1
+    if idx == 7 then
+        local my = rainbowToken
+        task.spawn(function()
+            while rainbowToken == my do
+                ACC = Color3.fromHSV((tick() % 6) / 6, 0.7, 1)
+                for _, r in ipairs(themeAcc) do
+                    pcall(function()
+                        r[1][r[2]] = ACC
+                    end)
+                end
+                for _, fn in ipairs(gradRepaints) do
+                    pcall(fn, ACC)
+                end
+                task.wait(0.1)
+            end
         end)
-    end
-    for _, fn in ipairs(gradRepaints) do
-        pcall(fn, ACC)
+    else
+        local t = THEMES[idx]
+        if t then
+            ACC = t.acc
+            CYAN = t.cyan
+        end
+        for _, r in ipairs(themeAcc) do
+            pcall(function()
+                r[1][r[2]] = ACC
+            end)
+        end
+        for _, fn in ipairs(gradRepaints) do
+            pcall(fn, ACC)
+        end
     end
 end
 
@@ -256,6 +307,10 @@ end
 local CFG_DIR = "NanoAim"
 local CFG_PATH = CFG_DIR .. "/config.json"
 local canFS = (type(writefile) == "function" and type(readfile) == "function")
+
+local function profilePath(i)
+    return CFG_DIR .. "/config_p" .. tostring(clamp(i or 1, 1, 3)) .. ".json"
+end
 
 local CFG_CLAMPS = {
     fovR = { 60, 600 },
@@ -268,7 +323,7 @@ local CFG_CLAMPS = {
     hitIdx = { 1, 4 },
     aimIdx = { 1, 2 },
     colIdx = { 1, 6 },
-    themeIdx = { 1, 6 },
+    themeIdx = { 1, 7 },
     trigDelay = { 0, 0.5 },
     trigRange = { 50, 1000 },
     trigFov = { 5, 120 },
@@ -285,6 +340,20 @@ local CFG_CLAMPS = {
     wsValue = { 8, 200 },
     jpValue = { 20, 300 },
     cardMaxD = { 100, 5000 },
+    hbSize = { 4, 20 },
+    tLockKeyIdx = { 1, 8 },
+    crossSize = { 4, 30 },
+    crossGap = { 0, 15 },
+    crossThick = { 1, 5 },
+    uiScale = { 0.8, 1.5 },
+    profileIdx = { 1, 3 },
+    espKeyIdx = { 1, 10 },
+    chamsKeyIdx = { 1, 10 },
+    flyKeyIdx = { 1, 10 },
+    noclipKeyIdx = { 1, 10 },
+    infKeyIdx = { 1, 10 },
+    tpKeyIdx = { 1, 10 },
+    trigKeyIdx = { 1, 10 },
 }
 
 local function applyConfig(d)
@@ -294,6 +363,7 @@ local function applyConfig(d)
     for k, v in pairs(d) do
         if k ~= "on" and k ~= "flyOn" and k ~= "noclipOn" and k ~= "clickTpOn"
             and k ~= "infJumpOn" and k ~= "wsEnabled" and k ~= "jpEnabled"
+            and k ~= "hbOn" and k ~= "tLockOn" and k ~= "crossOn" and k ~= "fpsBoostOn"
             and S[k] ~= nil and type(v) == type(S[k]) then
             local c = CFG_CLAMPS[k]
             if c then
@@ -317,6 +387,17 @@ if canFS then
             end
         end
     end)
+    pcall(function()
+        local ppath = profilePath(S.profileIdx)
+        if isfile and isfile(ppath) then
+            local ok, data = pcall(function()
+                return HS:JSONDecode(readfile(ppath))
+            end)
+            if ok and type(data) == "table" then
+                applyConfig(data)
+            end
+        end
+    end)
 end
 setThemeVars(S.themeIdx)
 
@@ -330,6 +411,41 @@ local function saveSilent()
         end
         writefile(CFG_PATH, HS:JSONEncode(S))
     end)
+end
+
+-- Auto-Save (global, debounced, Datei beim Schedule einfrieren -> kein Profil-Race)
+local autoSaveToken = 0
+local function autoSave()
+    if not S.autoSaveAll or not canFS then
+        return
+    end
+    autoSaveToken = autoSaveToken + 1
+    local myToken = autoSaveToken
+    local path = profilePath(S.profileIdx)
+    task.delay(0.6, function()
+        if myToken ~= autoSaveToken then
+            return
+        end
+        pcall(function()
+            if makefolder and isfolder and not isfolder(CFG_DIR) then
+                makefolder(CFG_DIR)
+            end
+            writefile(path, HS:JSONEncode(S))
+        end)
+    end)
+end
+
+-- ============ TELEPORT HISTORY ============
+local tpHistory = {}
+local tpHistoryRefresh = nil
+local function pushHistory(name, pos)
+    table.insert(tpHistory, 1, { name = tostring(name), pos = pos })
+    if #tpHistory > 5 then
+        table.remove(tpHistory)
+    end
+    if tpHistoryRefresh then
+        pcall(tpHistoryRefresh)
+    end
 end
 
 -- ============ KEYS / COLORS ============
@@ -348,10 +464,16 @@ local FREEMOUSE_CODES = {
     Enum.KeyCode.RightControl, Enum.KeyCode.RightAlt, Enum.KeyCode.F4,
     Enum.KeyCode.M, Enum.KeyCode.K,
 }
+local FEATURE_KEY_NAMES = { "-", "E", "Q", "F", "X", "V", "C", "G", "B", "Z" }
+local FEATURE_KEY_CODES = {
+    nil, Enum.KeyCode.E, Enum.KeyCode.Q, Enum.KeyCode.F, Enum.KeyCode.X,
+    Enum.KeyCode.V, Enum.KeyCode.C, Enum.KeyCode.G, Enum.KeyCode.B, Enum.KeyCode.Z,
+}
 local HITS = { "Head", "HumanoidRootPart", "UpperTorso", "LowerTorso" }
 local AIMMODES = { "Rage", "Smooth" }
 local COLNAMES = { "Red", "Purple", "Cyan", "Green", "White", "Rainbow" }
 local HP_SIDES = { "Links", "Rechts" }
+local PROFILE_NAMES = { "Profil 1", "Profil 2", "Profil 3" }
 
 local function curKey()
     return KEYCODES[S.keyIdx]
@@ -380,6 +502,7 @@ local function tpTo(pl)
     local myC = LP.Character
     local my = myC and myC:FindFirstChild("HumanoidRootPart")
     if hrp and my then
+        pushHistory(pl.DisplayName, hrp.CFrame.Position)
         my.CFrame = hrp.CFrame + Vector3.new(0, 3, 0)
     end
 end
@@ -466,6 +589,7 @@ if canDraw then
     table.insert(hub.draws, headD)
 end
 
+local crossDraws = {}
 local distLbls = {}
 hub.distLbls = distLbls
 
@@ -667,7 +791,9 @@ local function toast(msg, col)
 end
 
 -- ============ WINDOW ============
-local WIN_W, WIN_H = 470, 470
+local UI_BASE = 470
+local WIN_W = math.floor(UI_BASE * S.uiScale + 0.5)
+local WIN_H = WIN_W
 local HEAD, SB_W = 46, 120
 
 local win = ni("Frame", {
@@ -715,7 +841,7 @@ local sub = ni("TextLabel", {
     Position = UDim2.new(0, 14, 0, 25),
     Size = UDim2.new(0, 220, 0, 14),
     BackgroundTransparency = 1,
-    Text = "AimLock v1.29  •  " .. LP.DisplayName,
+    Text = "AimLock v1.30  •  " .. LP.DisplayName,
     TextColor3 = SUB,
     TextXAlignment = Enum.TextXAlignment.Left,
     Font = Enum.Font.Gotham,
@@ -795,6 +921,50 @@ local hideBtn = ni("TextButton", {
 ni("UICorner", { CornerRadius = UDim.new(0, 8), Parent = hideBtn })
 hideBtn.MouseButton1Click:Connect(function()
     win.Visible = false
+end)
+
+local miniBadge = nil
+local function showMiniBadge()
+    if miniBadge then
+        return
+    end
+    miniBadge = ni("TextButton", {
+        Position = UDim2.new(0, 10, 0.4, 0),
+        Size = UDim2.new(0, 40, 0, 40),
+        BackgroundColor3 = ACC,
+        BorderSizePixel = 0,
+        Text = "NH",
+        TextColor3 = Color3.fromRGB(15, 15, 20),
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        ZIndex = 95,
+        Parent = ui,
+    })
+    ni("UICorner", { CornerRadius = UDim.new(0, 10), Parent = miniBadge })
+    miniBadge.MouseButton1Click:Connect(function()
+        win.Visible = true
+        pcall(function() miniBadge:Destroy() end)
+        miniBadge = nil
+    end)
+end
+
+local miniBtn = ni("TextButton", {
+    AnchorPoint = Vector2.new(1, 0),
+    Position = UDim2.new(1, -72, 0, 10),
+    Size = UDim2.new(0, 26, 0, 26),
+    BackgroundColor3 = BG3,
+    BorderSizePixel = 0,
+    Text = "▣",
+    TextColor3 = CYAN,
+    Font = Enum.Font.GothamBold,
+    TextSize = 13,
+    AutoButtonColor = false,
+    Parent = header,
+})
+ni("UICorner", { CornerRadius = UDim.new(0, 8), Parent = miniBtn })
+miniBtn.MouseButton1Click:Connect(function()
+    win.Visible = false
+    showMiniBadge()
 end)
 
 -- Sidebar + Tabs
@@ -905,13 +1075,21 @@ ni("TextLabel", {
     Position = UDim2.new(0, 10, 0, 0),
     Size = UDim2.new(1, -20, 1, 0),
     BackgroundTransparency = 1,
-    Text = "Hotkeys: Settings-Tab  •  v1.29",
+    Text = "Hotkeys: Settings-Tab  •  v1.30",
     TextColor3 = SUB,
     Font = Enum.Font.Gotham,
     TextSize = 11,
     TextXAlignment = Enum.TextXAlignment.Left,
     Parent = footer,
 })
+
+-- GUI Scale (recentered!)
+local function applyUiScale()
+    local w = math.floor(UI_BASE * S.uiScale + 0.5)
+    local h = math.floor(UI_BASE * S.uiScale + 0.5)
+    win.Size = UDim2.new(0, w, 0, h)
+    win.Position = UDim2.new(0.5, -w / 2, 0.5, -h / 2)
+end
 
 -- Dragging (Fenster)
 local dragging = false
@@ -1009,6 +1187,7 @@ local function addToggle(page, titleTxt, key, doToast, onSet)
             else
                 toast(titleTxt .. "  AUS", RED)
             end
+            autoSave()
         end
     end
     row.MouseButton1Click:Connect(function()
@@ -1055,6 +1234,7 @@ local function addCycle(page, titleTxt, key, items, onSet)
         if onSet then
             pcall(onSet, S[key])
         end
+        autoSave()
     end)
     local ctrl = { set = function(v)
         S[key] = clamp(v, 1, #items)
@@ -1136,6 +1316,7 @@ local function addSlider(page, titleTxt, key, mn, mx, step, fmt)
         local snapped = mn + math.floor((raw - mn) / step + 0.5) * step
         S[key] = clamp(snapped, mn, mx)
         paint()
+        autoSave()
     end
     local draggingS = false
     row.InputBegan:Connect(function(inp)
@@ -1486,6 +1667,94 @@ local function serverHop()
 end
 -- ============ /MOVEMENT + SERVER MODULE ============
 
+-- ============ HITBOX EXPANDER MODULE (part-keyed) ============
+local hbCache = {}
+hub.hbCache = hbCache
+
+local function hbRestoreAll()
+    for part, size in pairs(hbCache) do
+        pcall(function()
+            if part and part.Parent then
+                part.Size = size
+            end
+        end)
+    end
+    table.clear(hbCache)
+end
+
+track(RS.Heartbeat:Connect(function()
+    if not S.hbOn then
+        return
+    end
+    for _, pl in ipairs(P:GetPlayers()) do
+        if pl ~= LP then
+            if not (S.teamCheck and pl.Team ~= nil and pl.Team == LP.Team) then
+                local c = pl.Character
+                if c then
+                    local hum = c:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 then
+                        for _, nm in ipairs({ "HumanoidRootPart", "Head" }) do
+                            local part = c:FindFirstChild(nm)
+                            if part and part:IsA("BasePart") then
+                                if hbCache[part] == nil then
+                                    hbCache[part] = part.Size
+                                end
+                                pcall(function()
+                                    part.CanCollide = false
+                                    part.Size = Vector3.new(S.hbSize, S.hbSize, S.hbSize)
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    for part in pairs(hbCache) do
+        if not part.Parent then
+            hbCache[part] = nil
+        end
+    end
+end))
+-- ============ /HITBOX EXPANDER ============
+
+-- ============ FPS BOOST MODULE ============
+local fpsSaved = nil
+local function fpsBoostApply(on)
+    if on then
+        if not fpsSaved then
+            fpsSaved = {
+                shadows = Lighting.GlobalShadows,
+                dif = Lighting.EnvironmentDiffuseScale,
+                spec = Lighting.EnvironmentSpecularScale,
+            }
+            pcall(function()
+                fpsSaved.deco = workspace.Terrain and workspace.Terrain.Decoration
+            end)
+            pcall(function() Lighting.GlobalShadows = false end)
+            pcall(function() Lighting.EnvironmentDiffuseScale = 0 end)
+            pcall(function() Lighting.EnvironmentSpecularScale = 0 end)
+            pcall(function()
+                if workspace.Terrain then
+                    workspace.Terrain.Decoration = false
+                end
+            end)
+        end
+    else
+        if fpsSaved then
+            pcall(function() Lighting.GlobalShadows = fpsSaved.shadows end)
+            pcall(function() Lighting.EnvironmentDiffuseScale = fpsSaved.dif end)
+            pcall(function() Lighting.EnvironmentSpecularScale = fpsSaved.spec end)
+            pcall(function()
+                if workspace.Terrain and fpsSaved.deco ~= nil then
+                    workspace.Terrain.Decoration = fpsSaved.deco
+                end
+            end)
+            fpsSaved = nil
+        end
+    end
+end
+
 -- ============ CONFIG BUTTONS ============
 local function saveConfigFull()
     if not canFS then
@@ -1496,7 +1765,7 @@ local function saveConfigFull()
         if makefolder and isfolder and not isfolder(CFG_DIR) then
             makefolder(CFG_DIR)
         end
-        writefile(CFG_PATH, HS:JSONEncode(S))
+        writefile(profilePath(S.profileIdx), HS:JSONEncode(S))
     end)
     if ok then
         toast("Config gespeichert", GRN)
@@ -1511,7 +1780,7 @@ local function loadConfigFull()
         return
     end
     local ok, data = pcall(function()
-        return HS:JSONDecode(readfile(CFG_PATH))
+        return HS:JSONDecode(readfile(profilePath(S.profileIdx)))
     end)
     if ok and type(data) == "table" then
         applyConfig(data)
@@ -1755,6 +2024,7 @@ local function buildWpList()
             local myC = LP.Character
             local my = myC and myC:FindFirstChild("HumanoidRootPart")
             if my then
+                pushHistory(w.name, my.Position)
                 my.CFrame = CFrame.new(w.pos + Vector3.new(0, 3, 0))
                 toast("WP -> " .. w.name, GRN)
             end
@@ -1916,6 +2186,16 @@ addSlider(aimPage, "Trigger Delay", "trigDelay", 0, 0.5, 0.05, function(x) retur
 addSlider(aimPage, "Trigger FOV", "trigFov", 5, 120, 5)
 addSlider(aimPage, "Trigger Range", "trigRange", 50, 1000, 50)
 addToggle(aimPage, "Trigger Team Check", "trigTeam", true)
+addHeader(aimPage, "Target Lock")
+addToggle(aimPage, "Target Lock", "tLockOn", true)
+addCycle(aimPage, "Lock-Taste (halten)", "tLockKeyIdx", KEYNAMES)
+addHeader(aimPage, "Hitbox")
+addToggle(aimPage, "Hitbox Expander", "hbOn", true, function(v)
+    if not v then
+        pcall(function() hbRestoreAll() end)
+    end
+end)
+addSlider(aimPage, "Hitbox Größe", "hbSize", 4, 20, 1)
 addHeader(aimPage, "Checks")
 addToggle(aimPage, "Team Check", "teamCheck", true)
 addToggle(aimPage, "Wall Check", "wallCheck", true)
@@ -1926,6 +2206,11 @@ addToggle(visPage, "FOV Circle", "showFov", true)
 addToggle(visPage, "Snap Line", "showSnap", true)
 addToggle(visPage, "Head Dot", "showDot", true)
 addToggle(visPage, "Distance Labels", "showDist", true)
+addHeader(visPage, "Crosshair")
+addToggle(visPage, "Custom Crosshair", "crossOn", true)
+addSlider(visPage, "Crosshair Größe", "crossSize", 4, 30, 1)
+addSlider(visPage, "Crosshair Gap", "crossGap", 0, 15, 1)
+addSlider(visPage, "Crosshair Dicke", "crossThick", 1, 5, 1)
 
 addHeader(espPage, "Player ESP")
 addToggle(espPage, "ESP Master", "espOn", true)
@@ -2019,18 +2304,44 @@ end)
 buildWpList()
 
 addHeader(setPage, "Config")
+addCycle(setPage, "Profil", "profileIdx", PROFILE_NAMES)
 addButton(setPage, "Config speichern", saveConfigFull)
 addButton(setPage, "Config laden", loadConfigFull)
 addHeader(setPage, "UI")
 addCycle(setPage, "Theme", "themeIdx", THEME_NAMES, function() setThemeVars(S.themeIdx) end)
+addButton(setPage, "GUI vergrößern (+)", function()
+    S.uiScale = clamp(S.uiScale + 0.1, 0.8, 1.5)
+    applyUiScale()
+    toast("GUI: " .. string.format("%.0f%%", S.uiScale * 100), GRN)
+    autoSave()
+end)
+addButton(setPage, "GUI verkleinern (-)", function()
+    S.uiScale = clamp(S.uiScale - 0.1, 0.8, 1.5)
+    applyUiScale()
+    toast("GUI: " .. string.format("%.0f%%", S.uiScale * 100), GRN)
+    autoSave()
+end)
+addToggle(setPage, "Auto-Save (alle Änderungen)", "autoSaveAll", true)
 addHeader(setPage, "Hotkeys")
 addCycle(setPage, "GUI Taste", "guiKeyIdx", GUIKEY_NAMES)
 addCycle(setPage, "Free-Mouse Taste", "freeMouseIdx", FREEMOUSE_NAMES)
 addToggle(setPage, "Free Mouse (Maus lösen)", "freeMouseOn", true)
+addHeader(setPage, "Feature-Tasten")
+addCycle(setPage, "ESP", "espKeyIdx", FEATURE_KEY_NAMES)
+addCycle(setPage, "Chams", "chamsKeyIdx", FEATURE_KEY_NAMES)
+addCycle(setPage, "Fly", "flyKeyIdx", FEATURE_KEY_NAMES)
+addCycle(setPage, "Noclip", "noclipKeyIdx", FEATURE_KEY_NAMES)
+addCycle(setPage, "Inf Jump", "infKeyIdx", FEATURE_KEY_NAMES)
+addCycle(setPage, "Click-TP", "tpKeyIdx", FEATURE_KEY_NAMES)
+addCycle(setPage, "Triggerbot", "trigKeyIdx", FEATURE_KEY_NAMES)
 addHeader(setPage, "Server")
 addToggle(setPage, "Anti-AFK", "antiAfkOn", false)
 addToggle(setPage, "Auto-Rejoin bei Kick", "autoRejoinOn", true)
 addButton(setPage, "Server Hop (neuer Server)", serverHop)
+addHeader(setPage, "Performance")
+addToggle(setPage, "FPS Boost", "fpsBoostOn", true, function(v)
+    pcall(function() fpsBoostApply(v) end)
+end)
 addHeader(setPage, "Start")
 addToggle(setPage, "Fast Start (Splash überspringen)", "fastStart", true, function(v, silent)
     if not silent then
@@ -2304,6 +2615,66 @@ do
     homeStatRow("Spieler")
     homeStatRow("Spiel")
     homeStatRow("Executor")
+    homeStatRow("Position")
+
+    -- Teleport-History
+    local homeHistHead = ni("TextLabel", {
+        Size = UDim2.new(1, -16, 0, 20),
+        BackgroundTransparency = 1,
+        Text = "TELEPORT-HISTORY",
+        TextColor3 = ACC,
+        Font = Enum.Font.GothamBold,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = homePage,
+    })
+    table.insert(themeAcc, { homeHistHead, "TextColor3" })
+    local homeHistHolder = ni("Frame", {
+        Size = UDim2.new(1, -16, 0, 0),
+        BackgroundTransparency = 1,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Parent = homePage,
+    })
+    ni("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = homeHistHolder })
+    tpHistoryRefresh = function()
+        for _, ch in ipairs(homeHistHolder:GetChildren()) do
+            if ch:IsA("TextButton") then
+                pcall(function() ch:Destroy() end)
+            end
+        end
+        for _, h in ipairs(tpHistory) do
+            local row = ni("TextButton", {
+                Size = UDim2.new(1, 0, 0, 24),
+                BackgroundColor3 = BG2,
+                BorderSizePixel = 0,
+                Text = "",
+                AutoButtonColor = false,
+                Parent = homeHistHolder,
+            })
+            ni("UICorner", { CornerRadius = UDim.new(0, 6), Parent = row })
+            ni("TextLabel", {
+                Position = UDim2.new(0, 8, 0, 0),
+                Size = UDim2.new(1, -16, 1, 0),
+                BackgroundTransparency = 1,
+                Text = h.name .. "  (" .. string.format("%.0f, %.0f, %.0f", h.pos.X, h.pos.Y, h.pos.Z) .. ")",
+                TextColor3 = TXT,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                Parent = row,
+            })
+            row.MouseButton1Click:Connect(function()
+                local myC = LP.Character
+                local my = myC and myC:FindFirstChild("HumanoidRootPart")
+                if my then
+                    my.CFrame = CFrame.new(h.pos + Vector3.new(0, 3, 0))
+                    toast("Zurück -> " .. h.name, GRN)
+                end
+            end)
+        end
+    end
+    tpHistoryRefresh()
 
     local homeFeatHead = ni("TextLabel", {
         Size = UDim2.new(1, -16, 0, 20),
@@ -2318,7 +2689,7 @@ do
     table.insert(themeAcc, { homeFeatHead, "TextColor3" })
 
     local homeGrid = ni("Frame", {
-        Size = UDim2.new(1, -16, 0, 130),
+        Size = UDim2.new(1, -16, 0, 164),
         BackgroundTransparency = 1,
         Parent = homePage,
     })
@@ -2328,7 +2699,7 @@ do
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = homeGrid,
     })
-    local homeFeats = { "🎯 AimLock", "🔫 Triggerbot", "👁️ ESP", "🧊 Chams", "📍 Waypoints", "🎞️ Filter", "🚀 Movement", "🃏 Card ESP" }
+    local homeFeats = { "🎯 AimLock", "🔫 Triggerbot", "👁️ ESP", "🧊 Chams", "📍 Waypoints", "🎞️ Filter", "🚀 Movement", "🃏 Card ESP", "🎯 TargetLock", "📐 Hitbox" }
     for _, f in ipairs(homeFeats) do
         local b = ni("Frame", {
             BackgroundColor3 = BG2,
@@ -2361,7 +2732,7 @@ do
     ni("TextLabel", {
         Size = UDim2.new(1, -16, 0, 40),
         BackgroundTransparency = 1,
-        Text = "NanoHub v1.29  •  Avatar-Klick = Theme\nHotkeys & Einstellungen: Settings-Tab",
+        Text = "NanoHub v1.30  •  Avatar-Klick = Theme\nHotkeys & Einstellungen: Settings-Tab",
         TextColor3 = SUB,
         Font = Enum.Font.Gotham,
         TextSize = 12,
@@ -2405,6 +2776,16 @@ do
                     end
                 end)
                 homeStats["Executor"].Text = ex
+            end
+            if homeStats["Position"] then
+                local c = LP.Character
+                local hrp = c and c:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local p = hrp.Position
+                    homeStats["Position"].Text = string.format("%.0f, %.0f, %.0f", p.X, p.Y, p.Z)
+                else
+                    homeStats["Position"].Text = "-"
+                end
             end
         end
         pcall(function() homeFpsConn:Disconnect() end)
@@ -2602,6 +2983,12 @@ closeBtn.MouseButton1Click:Connect(function()
     hub.draws = nil
     removeDraws(hub.distLbls)
     hub.distLbls = nil
+    for i = 1, 5 do
+        local d = crossDraws[i]
+        if d then
+            pcall(function() d:Remove() end)
+        end
+    end
     for _, d in pairs(hub.wpDraws or {}) do
         pcall(function()
             if d then
@@ -2614,6 +3001,8 @@ closeBtn.MouseButton1Click:Connect(function()
     espClearAll()
     pcall(function() flyCleanup() end)
     pcall(function() noclipRestore() end)
+    pcall(function() hbRestoreAll() end)
+    pcall(function() fpsBoostApply(false) end)
     pcall(function()
         local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if h then
@@ -2646,6 +3035,15 @@ end)
 -- ============ KEYBINDS ============
 local trigNext = 0
 local trigHeld = false
+local lockedPl = nil
+
+track(UIS.InputEnded:Connect(function(inp)
+    if inp.KeyCode == KEYCODES[S.tLockKeyIdx] and lockedPl then
+        lockedPl = nil
+        toast("Target Lock gelöst", RED)
+    end
+end))
+
 track(UIS.InputBegan:Connect(function(inp, g)
     if g then
         return
@@ -2668,6 +3066,7 @@ track(UIS.InputBegan:Connect(function(inp, g)
             local ray = cam:ScreenPointToRay(M.X, M.Y)
             local hit = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
             local pos = hit and hit.Position or (ray.Origin + ray.Direction * 200)
+            pushHistory("Click-TP", myHrp.Position)
             myHrp.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
             toast("Click-TP", GRN)
         end
@@ -2685,9 +3084,45 @@ track(UIS.InputBegan:Connect(function(inp, g)
         else
             toast("Free Mouse AUS", RED)
         end
+    elseif S.tLockOn and inp.KeyCode == KEYCODES[S.tLockKeyIdx] then
+        local tp1 = findTarget()
+        if tp1 then
+            lockedPl = tp1
+            toast("Target Lock: " .. tp1.Name, GRN)
+        else
+            toast("Kein Ziel", RED)
+        end
     elseif inp.KeyCode == curKey() and S.keyEnabled then
         if aimSet then
             aimSet.set(not S.on)
+        end
+    else
+        local featMap = {
+            { "espKeyIdx", "espOn", "ESP" },
+            { "chamsKeyIdx", "chamsOn", "Chams" },
+            { "flyKeyIdx", "flyOn", "Fly" },
+            { "noclipKeyIdx", "noclipOn", "Noclip" },
+            { "infKeyIdx", "infJumpOn", "Inf Jump" },
+            { "tpKeyIdx", "clickTpOn", "Click-TP" },
+            { "trigKeyIdx", "trigOn", "Triggerbot" },
+        }
+        for _, fm in ipairs(featMap) do
+            local kIdx = S[fm[1]]
+            if kIdx and kIdx > 1 and inp.KeyCode == FEATURE_KEY_CODES[kIdx] and inp.KeyCode ~= curKey() then
+                local newV = not S[fm[2]]
+                if CTRLS[fm[2]] then
+                    CTRLS[fm[2]].set(newV)
+                else
+                    S[fm[2]] = newV
+                end
+                if newV then
+                    toast(fm[3] .. "  AN", GRN)
+                else
+                    toast(fm[3] .. "  AUS", RED)
+                end
+                autoSave()
+                break
+            end
         end
     end
 end))
@@ -2764,12 +3199,61 @@ track(RS.RenderStepped:Connect(function()
             end
         end
     end
-    if best and bestPart and v then
+    -- Custom Crosshair
+    if canDraw then
+        if S.crossOn and v then
+            local cx, cy = v.ViewportSize.X / 2, v.ViewportSize.Y / 2
+            local col = drawColor()
+            local defs = {
+                { from = Vector2.new(cx, cy - S.crossGap), to = Vector2.new(cx, cy - S.crossGap - S.crossSize) },
+                { from = Vector2.new(cx, cy + S.crossGap), to = Vector2.new(cx, cy + S.crossGap + S.crossSize) },
+                { from = Vector2.new(cx - S.crossGap, cy), to = Vector2.new(cx - S.crossGap - S.crossSize, cy) },
+                { from = Vector2.new(cx + S.crossGap, cy), to = Vector2.new(cx + S.crossGap + S.crossSize, cy) },
+            }
+            for i = 1, 4 do
+                if not crossDraws[i] then
+                    crossDraws[i] = Drawing.new("Line")
+                end
+                crossDraws[i].Thickness = S.crossThick
+                crossDraws[i].Color = col
+                crossDraws[i].From = defs[i].from
+                crossDraws[i].To = defs[i].to
+                crossDraws[i].Visible = true
+            end
+            if not crossDraws[5] then
+                crossDraws[5] = Drawing.new("Circle")
+                crossDraws[5].NumSides = 16
+                crossDraws[5].Filled = true
+            end
+            crossDraws[5].Color = col
+            crossDraws[5].Radius = 2
+            crossDraws[5].Position = Vector2.new(cx, cy)
+            crossDraws[5].Visible = true
+        else
+            for i = 1, 5 do
+                if crossDraws[i] then
+                    pcall(function() crossDraws[i].Visible = false end)
+                end
+            end
+        end
+    end
+    -- Aim: Target Lock > Aimbot
+    local lockPart = nil
+    if lockedPl then
+        local lc = lockedPl.Character
+        local lhum = lc and lc:FindFirstChildOfClass("Humanoid")
+        lockPart = lc and lc:FindFirstChild(HITS[S.hitIdx])
+        if not (lhum and lhum.Health > 0 and lockPart) then
+            lockPart = nil
+        end
+    end
+    local aimPart = lockPart or bestPart
+    if aimPart and v then
         local alpha = 1
-        if S.aimIdx == 2 then
+        if S.aimIdx == 2 and not lockPart then
             alpha = clamp(1 - S.smooth, 0.05, 1)
         end
-        local targetCFrame = CFrame.new(v.CFrame.Position, bestPart.Position)
+        local targetCFrame = CFrame.new(v.CFrame.Position, aimPart.Position)
         v.CFrame = v.CFrame:Lerp(targetCFrame, alpha)
     end
     -- Triggerbot
@@ -3156,4 +3640,4 @@ track(P.PlayerRemoving:Connect(function(pl)
 end))
 
 showTab("Home")
-print("[NanoHub] AimLock v1.29 ready  -  Home + AimLock + Triggerbot + ESP + Card-ESP + Filter + Movement (Fly/Noclip/InfJump/ClickTP/WS/JP) + Anti-AFK + Auto-Rejoin + Server Hop + Player-List + Waypoints + Hotkeys + FreeMouse + Fast Start + Themes + Config")
+print("[NanoHub] AimLock v1.30 ready  -  Home + AimLock + TargetLock + Hitbox-Expander + Triggerbot + ESP + Card-ESP + Crosshair + Filter + Movement + Anti-AFK + Auto-Rejoin + Server Hop + Hotkeys + Mini-Mode + GUI-Scale + FPS-Boost + Profiles + AutoSave + TP-History + Themes + Config")
