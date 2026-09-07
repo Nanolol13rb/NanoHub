@@ -262,8 +262,8 @@ local HK_NAMES = { "-", "E", "Q", "F", "X", "V", "C", "T", "G", "H", "J" }
 local HK_CODES = { nil, Enum.KeyCode.E, Enum.KeyCode.Q, Enum.KeyCode.F, Enum.KeyCode.X, Enum.KeyCode.V, Enum.KeyCode.C, Enum.KeyCode.T, Enum.KeyCode.G, Enum.KeyCode.H, Enum.KeyCode.J }
 local PANIC_NAMES = { "B", "N", "M", "K", "-" }
 local PANIC_CODES = { Enum.KeyCode.B, Enum.KeyCode.N, Enum.KeyCode.M, Enum.KeyCode.K, nil }
-local GUIKEYS = { "RightAlt", "RightCtrl", "F2", "F3" }
-local GUIKEY_CODES = { Enum.KeyCode.RightAlt, Enum.KeyCode.RightCtrl, Enum.KeyCode.F2, Enum.KeyCode.F3 }
+local GUIKEYS = { "RightAlt", "RightControl", "F2", "F3" }
+local GUIKEY_CODES = { Enum.KeyCode.RightAlt, Enum.KeyCode.RightControl, Enum.KeyCode.F2, Enum.KeyCode.F3 }
 local TINT_NAMES = { "Aus", "Rot", "Blau", "Grün", "Orange", "Violett" }
 local TINT_COLS = { nil, Color3.fromRGB(255, 120, 120), Color3.fromRGB(120, 170, 255), Color3.fromRGB(120, 255, 150), Color3.fromRGB(255, 200, 120), Color3.fromRGB(200, 140, 255) }
 local FILTER_NAMES = { "Realistic", "Cinematic", "Vibrant", "Cold", "Warm" }
@@ -1115,7 +1115,7 @@ APPLY.fpsBoost = function(v)
 	end)
 end
 
--- ================= TEIL 1/3 ENDE — sag "weiter" für Teil 2/3 =================
+-- ================= TEIL 1/3 ENDE (FIX drin: RightControl) =================
 --// ============ HOME TAB ============
 do
 	local card = ni("Frame", { Size = UDim2.new(1, -16, 0, 84), BackgroundColor3 = BG2, BorderSizePixel = 0, Parent = homePage })
