@@ -3113,14 +3113,14 @@ track(RS.RenderStepped:Connect(function()
 end))
 -- ============ KEY SPLASH ============
 local function buildKeySplash()
-local VALID_KEY = "Nano"
+local VALID_KEY = "Nano","Lionel"
 local KEY_FILE = CFG_DIR .. "/key.txt"
 
 local function keyIsValid(k)
     return string.lower(tostring(k or "")):gsub("%s", "") == string.lower(VALID_KEY)
 end
 
-local KEY_DURATION = 12 * 60 * 60 -- 12 Stunden
+local KEY_DURATION = 00 * 01 * 60 -- 12 Stunden
 
 local function getKeyData()
     if not canFS then
