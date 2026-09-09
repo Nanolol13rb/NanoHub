@@ -3113,7 +3113,7 @@ track(RS.RenderStepped:Connect(function()
 end))
 -- ============ KEY SPLASH ============
 local function buildKeySplash()
-local VALID_KEY = "Nano","Lionel"
+local VALID_KEY = "Nano"
 local KEY_FILE = CFG_DIR .. "/key.txt"
 
 local function keyIsValid(k)
