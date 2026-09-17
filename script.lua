@@ -1092,7 +1092,7 @@ local function buildHome()
     ni("UICorner", { CornerRadius = UDim.new(0, 6), Parent = abox })
     abox.FocusLost:Connect(function(enter)
         if not enter then return end
-        if abox.Text == "Nanolol13" then
+        if abox.Text == "Admin""admin" then
             S.isAdmin = true
             abox.Text = ""
             abox.PlaceholderText = "Admin OK ✓"
