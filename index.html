@@ -1,1 +1,235 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NanoHub — Status & Script</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+  body { background:#08090e; color:#f0f2fc; min-height:100vh; overflow-x:hidden; }
+  .waves { position:fixed; inset:0; z-index:0; opacity:.5; }
+  .content { position:relative; z-index:1; max-width:860px; margin:0 auto; padding:40px 20px 80px; }
 
+  header { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:40px; }
+  .brand { display:flex; align-items:center; gap:14px; }
+  .logo { width:52px; height:52px; border-radius:14px; background:linear-gradient(135deg,#9664ff,#5ac8ff);
+          display:flex; align-items:center; justify-content:center; font-weight:900; font-size:24px; color:#0a0b12; }
+  h1 { font-size:26px; } h1 span { color:#9664ff; }
+  .sub { color:#969eb6; font-size:13px; }
+
+  .authbtn { background:#9664ff; color:#0a0b12; border:0; padding:9px 20px; border-radius:10px;
+             font-weight:700; font-size:14px; cursor:pointer; }
+  .authbtn:hover { filter:brightness(1.15); }
+  .userchip { display:flex; align-items:center; gap:10px; background:#141722; border:1px solid #2a3046;
+              border-radius:12px; padding:6px 12px; }
+  .userchip img { width:30px; height:30px; border-radius:50%; }
+  .userchip b { font-size:13px; }
+  .logout { background:none; border:0; color:#ff545c; cursor:pointer; font-size:12px; font-weight:700; }
+
+  .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:50;
+             align-items:center; justify-content:center; }
+  .overlay.show { display:flex; }
+  .modal { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:28px; width:320px; }
+  .modal h2 { font-size:18px; margin-bottom:16px; text-align:center; }
+  .modal input { width:100%; background:#0a0b12; border:1px solid #2a3046; color:#f0f2fc; border-radius:10px;
+                 padding:11px 14px; font-size:14px; margin-bottom:10px; outline:none; }
+  .modal input:focus { border-color:#9664ff; }
+  .modal .primary { width:100%; background:#9664ff; color:#0a0b12; border:0; padding:11px; border-radius:10px;
+                    font-weight:700; font-size:14px; cursor:pointer; margin-bottom:8px; }
+  .modal .switch { width:100%; background:none; border:0; color:#969eb6; font-size:12px; cursor:pointer; }
+  .modal .err { color:#ff545c; font-size:12px; text-align:center; min-height:16px; margin-bottom:6px; }
+
+  .hero { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:28px; margin-bottom:28px; }
+  .hero h2 { font-size:20px; margin-bottom:6px; }
+  .hero p { color:#969eb6; font-size:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; margin-bottom:28px; }
+  .card { background:#141722; border:1px solid #232840; border-radius:14px; padding:18px; }
+  .card h3 { font-size:15px; margin-bottom:12px; }
+  .badge { display:inline-flex; align-items:center; gap:8px; padding:5px 12px; border-radius:8px; font-size:12px; font-weight:700; }
+  .dot { width:8px; height:8px; border-radius:50%; animation:pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .up { background:#0e2217; color:#60e28a; } .up .dot { background:#60e28a; }
+  .working { background:#2a1e0c; color:#ffaa3c; } .working .dot { background:#ffaa3c; }
+  .down { background:#2a0e10; color:#ff545c; } .down .dot { background:#ff545c; }
+  .unknown { background:#1a1d2b; color:#969eb6; } .unknown .dot { background:#969eb6; }
+
+  .loader { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:24px; }
+  .loader h2 { font-size:17px; margin-bottom:12px; }
+  code { display:block; background:#0a0b12; border:1px solid #232840; border-radius:10px; padding:14px;
+         font-family:Consolas,monospace; font-size:12px; color:#5ac8ff; word-break:break-all; margin-bottom:12px; }
+  footer { text-align:center; color:#5a6078; font-size:12px; margin-top:40px; }
+  .live { display:inline-block; width:8px; height:8px; border-radius:50%; background:#60e28a; animation:pulse 1.2s infinite; margin-right:6px; }
+</style>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+           onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyCyEEdbjWUPSetPumXzK0Xi7Q8m8JFjRc",
+    authDomain:        "nanohub-script.firebaseapp.com",
+    projectId:         "nanohub-script",
+    storageBucket:     "nanohub-script.firebasestorage.app",
+    messagingSenderId: "499111949014",
+    appId:             "1:499111949014:web:4aa0a7157a482c697f8f77"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  const authArea = document.getElementById("authArea");
+  const overlay  = document.getElementById("authOverlay");
+  const err      = document.getElementById("authErr");
+  let mode = "login";
+
+  function renderChip(u){
+    const name = (u.displayName || u.email.split("@")[0]);
+    authArea.innerHTML = `
+      <div class="userchip">
+        <img src="https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=9664ff">
+        <b>${name}</b>
+        <button class="logout" id="logoutBtn">Logout</button>
+      </div>`;
+    document.getElementById("logoutBtn").onclick = () => signOut(auth);
+  }
+
+  onAuthStateChanged(auth, u => {
+    const lb = document.getElementById("loaderBox");
+    if (u) {
+      renderChip(u);
+      overlay.classList.remove("show");
+      if (lb) lb.style.display = "";
+    } else {
+      if (lb) lb.style.display = "none";
+      authArea.innerHTML = `<button class="authbtn" id="openAuth">Anmelden / Registrieren</button>`;
+      document.getElementById("openAuth").onclick = () => { err.textContent=""; overlay.classList.add("show"); };
+    }
+  });
+
+  document.getElementById("authSwitch").onclick = () => {
+    mode = (mode === "login") ? "register" : "login";
+    document.getElementById("authTitle").textContent  = (mode === "login") ? "Anmelden" : "Account erstellen";
+    document.getElementById("authSubmit").textContent = (mode === "login") ? "Login" : "Registrieren";
+    document.getElementById("authSwitch").textContent = (mode === "login")
+      ? "Noch kein Account? → Registrieren" : "Schon ein Account? → Anmelden";
+    err.textContent = "";
+  };
+
+  document.getElementById("authForm").onsubmit = async e => {
+    e.preventDefault();
+    const user = document.getElementById("fUser").value.trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
+    const pass = document.getElementById("fPass").value;
+    if (user.length < 3) { err.textContent = "Username: min. 3 Zeichen (a-z, 0-9, _)"; return; }
+    if (pass.length < 6) { err.textContent = "Passwort: min. 6 Zeichen"; return; }
+    err.textContent = "";
+    const mail = user + "@nanohub.local";
+    try {
+      if (mode === "register") {
+        const cred = await createUserWithEmailAndPassword(auth, mail, pass);
+        await updateProfile(cred.user, { displayName: user });
+      } else {
+        await signInWithEmailAndPassword(auth, mail, pass);
+      }
+    } catch (ex) {
+      const m = ex.code || "";
+      err.textContent =
+        m.includes("email-already-in-use") ? "Username ist schon vergeben" :
+        m.includes("invalid-credential") || m.includes("wrong-password") || m.includes("user-not-found") ? "Username oder Passwort falsch" :
+        m.includes("api-key-not-valid") ? "Firebase-Config falsch eingetragen" :
+        m.includes("auth/unauthorized-domain") ? "Domain nicht in Firebase freigeschaltet" :
+        "Fehler: " + m;
+    }
+  };
+
+  // ---- Live-Status (JSONBin, public) ----
+  const BIN = "6aabf981ac6210605ad8b4c6";
+  const LABEL = { up:["up","UP"], working:["working","WORKING ON"], down:["down","DOWN"] };
+  async function loadStatus(){
+    const grid = document.getElementById("statusGrid");
+    try{
+      const r = await fetch(`https://api.jsonbin.io/v3/b/${BIN}/latest`);
+      const j = await r.json();
+      const rec = j.record || {};
+      grid.innerHTML = "";
+      for(const [k,v] of Object.entries(rec)){
+        const s = LABEL[v] ? v : "unknown";
+        const txt = LABEL[v] ? LABEL[v][1] : String(v).toUpperCase();
+        grid.innerHTML += `<div class="card"><h3>${k.replace(/^\[[^\]]*\]\s*/,"")}</h3>
+          <span class="badge ${s}"><span class="dot"></span>${txt}</span></div>`;
+      }
+    }catch(e){
+      grid.innerHTML = `<div class="card"><h3>Status</h3><span class="badge unknown"><span class="dot"></span>OFFLINE</span></div>`;
+    }
+  }
+  loadStatus();
+  setInterval(loadStatus, 30000);
+</script>
+</head>
+<body>
+
+<svg class="waves" viewBox="0 0 1440 600" preserveAspectRatio="none">
+  <path fill="#9664ff" fill-opacity="0.07" d="M0,300 C300,200 600,400 900,300 C1100,240 1300,340 1440,280 L1440,600 L0,600 Z">
+    <animate attributeName="d" dur="10s" repeatCount="indefinite"
+      values="M0,300 C300,200 600,400 900,300 C1100,240 1300,340 1440,280 L1440,600 L0,600 Z;
+              M0,280 C300,380 600,240 900,340 C1100,400 1300,260 1440,320 L1440,600 L0,600 Z;
+              M0,300 C300,200 600,400 900,300 C1100,240 1300,340 1440,280 L1440,600 L0,600 Z"/>
+  </path>
+  <path fill="#5ac8ff" fill-opacity="0.05" d="M0,380 C400,300 700,460 1000,380 C1200,330 1350,420 1440,380 L1440,600 L0,600 Z">
+    <animate attributeName="d" dur="14s" repeatCount="indefinite"
+      values="M0,380 C400,300 700,460 1000,380 C1200,330 1350,420 1440,380 L1440,600 L0,600 Z;
+              M0,420 C400,480 700,320 1000,420 C1200,480 1350,360 1440,400 L1440,600 L0,600 Z;
+              M0,380 C400,300 700,460 1000,380 C1200,330 1350,420 1440,380 L1440,600 L0,600 Z"/>
+  </path>
+</svg>
+
+<div class="content">
+  <header>
+    <div class="brand">
+      <div class="logo">N</div>
+      <div>
+        <h1>Nano<span>Hub</span></h1>
+        <div class="sub">AimLock • ESP • Key-System • Game Hub — v2.7</div>
+      </div>
+    </div>
+    <div id="authArea"></div>
+  </header>
+
+  <div class="hero">
+    <h2>Server Status</h2>
+    <p>Live-Status aller Games — Admin setzt sie im Hub, Update alle 30s. <span class="live"></span>live</p>
+  </div>
+
+  <div class="grid" id="statusGrid"></div>
+
+  <div class="loader" id="loaderBox" style="display:none;">
+    <h2>📜 Get the Script</h2>
+    <code id="loaderCode">loadstring(game:HttpGet("https://raw.githubusercontent.com/Nanolol13rb/NanoHub/main/script.lua"))()</code>
+    <button class="authbtn" onclick="copyLoader(this)">Copy Loader</button>
+  </div>
+
+  <footer>NanoHub • made by Nano • Status via JSONBin • Auth via Firebase</footer>
+</div>
+
+<div class="overlay" id="authOverlay">
+  <div class="modal">
+    <h2 id="authTitle">Anmelden</h2>
+    <form id="authForm">
+      <input id="fUser" placeholder="Username" autocomplete="username">
+      <input id="fPass" type="password" placeholder="Passwort" autocomplete="current-password">
+      <div class="err" id="authErr"></div>
+      <button type="submit" class="primary" id="authSubmit">Login</button>
+    </form>
+    <button class="switch" id="authSwitch">Noch kein Account? → Registrieren</button>
+  </div>
+</div>
+
+<script>
+  function copyLoader(btn){
+    navigator.clipboard.writeText(document.getElementById("loaderCode").textContent);
+    btn.textContent = "✓ Copied!";
+    setTimeout(()=>btn.textContent="Copy Loader",1500);
+  }
+</script>
+</body>
+</html>
