@@ -214,10 +214,23 @@ local function nbWrite()
     return ok
 end
 task.spawn(function()
-    local st = nbRead()
-    if st then
-        S.gameStatus = st
-        if hub.buildGrid then pcall(hub.buildGrid) end
+    while true do
+        local st = nbRead()
+        if st then
+            local changed = false
+            for k, v in pairs(st) do
+                if (S.gameStatus or {})[k] ~= v then changed = true end
+            end
+            for k in pairs(S.gameStatus or {}) do
+                if st[k] == nil then changed = true end
+            end
+            S.gameStatus = st
+            if changed then
+                if hub.buildGrid then pcall(hub.buildGrid) end
+                if hub.updateScriptsTab then pcall(hub.updateScriptsTab) end
+            end
+        end
+        task.wait(10)  -- alle 60s nach neuem Status schauen
     end
 end)
 
