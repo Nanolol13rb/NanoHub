@@ -53,7 +53,7 @@
   .card { position:relative; background:#141722; border:2px solid #000; border-radius:12px; padding:12px; height:150px; }
   .card:hover { background:#1c2033; }
   .gicon { position:absolute; top:12px; left:14px; width:64px; height:64px; border-radius:10px;
-           background:#1c2033; object-fit:cover; }
+           background:#1c2033; object-fit:cover; overflow:hidden; }
   .gtitle { position:absolute; top:86px; left:14px; right:14px; font-size:14px; font-weight:900;
             letter-spacing:.5px; color:#f0f2fc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .gbadge { position:absolute; top:10px; right:10px; display:inline-flex; align-items:center; gap:7px;
@@ -164,7 +164,7 @@
 
   const FB_DB_URL = "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app";
   const ADMIN_USERS = ["nanolol13"];
-  // disp = echter Titel im Hub, emoji = Fallback-Bild, placeId = Roblox-Icon
+  // disp = echter Titel wie im Hub, emoji = Fallback-Bild, placeId = Roblox-Icon
   const GAME_META = {
     "Mine Antarctica": { disp: "[▲] Mine Antarctica", emoji: "🧊", placeId: 138686218420016 },
     "Blade Ball":      { disp: "Blade Ball",          emoji: "⚔️", placeId: 13772394625 }
@@ -199,24 +199,38 @@
         const st = curStatus[n] || "";
         adminBtns =
           '<div class="abtns">' +
-          '<button class="abtn bup '   + (st==="up"?"on":"")      + '" onclick="setStatus(\'' + n + '\',\'up\')">UP</button>' +
-          '<button class="abtn bwork ' + (st==="working"?"on":"") + '" onclick="setStatus(\'' + n + '\',\'working\')">WORKING</button>' +
-          '<button class="abtn bdown ' + (st==="down"?"on":"")    + '" onclick="setStatus(\'' + n + '\',\'down\')">DOWN</button>' +
+          '<button class="abtn bup '   + (st==="up"?"on":"")      + '" data-g="' + n + '" data-v="up">UP</button>' +
+          '<button class="abtn bwork ' + (st==="working"?"on":"") + '" data-g="' + n + '" data-v="working">WORKING</button>' +
+          '<button class="abtn bdown ' + (st==="down"?"on":"")    + '" data-g="' + n + '" data-v="down">DOWN</button>' +
           '</div>';
       }
       const meta = GAME_META[n] || {};
+      const emoji = meta.emoji || "🎮";
       const iconUrl = meta.placeId
         ? "https://www.roblox.com/asset-thumbnail/image?placeId=" + meta.placeId + "&width=150&height=150&format=png"
         : null;
       const iconHtml = iconUrl
-        ? '<img class="gicon" src="' + iconUrl + '" onerror="this.outerHTML=\'<div class="gicon" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' + (meta.emoji || "🎮") + '</div>\'">'
-        : '<div class="gicon" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' + (meta.emoji || "🎮") + '</div>';
+        ? '<div class="gicon" data-emoji="' + emoji + '" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' +
+          emoji + '<img src="' + iconUrl + '" style="position:absolute;inset:0;width:100%;height:100%;border-radius:10px;object-fit:cover;"></div>'
+        : '<div class="gicon" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' + emoji + '</div>';
       const bd = BADGE[curStatus[n]] || ["unknown", "OFFLINE"];
       return '<div class="card">' + iconHtml +
              '<span class="gbadge ' + bd[0] + '"><span class="dot"></span>' + bd[1] + '</span>' +
              '<div class="gtitle">' + (meta.disp || n).toUpperCase() + '</div>' +
              adminBtns + '</div>';
     }).join("");
+
+    // Bild-Fallback sauber per JS (kein Inline-onerror)
+    grid.querySelectorAll(".gicon img").forEach(img => {
+      img.onerror = function(){
+        const box = this.parentNode;
+        box.textContent = box.getAttribute("data-emoji") || "🎮";
+      };
+    });
+    // Admin-Buttons verdrahten (sauber ohne Inline-Handler)
+    grid.querySelectorAll(".abtn").forEach(btn => {
+      btn.onclick = () => setStatus(btn.getAttribute("data-g"), btn.getAttribute("data-v"));
+    });
   }
 
   async function setStatus(name, val){
