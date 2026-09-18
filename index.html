@@ -145,13 +145,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
   // ===== Firebase =====
-  const firebaseConfig = {
-    apiKey: "AIzaSyCytEdjWUPSetPumXzK0KxOi7Q8m8JFjRc",
-    authDomain: "nanohub-script.firebaseapp.com",
-    projectId: "nanohub-script",
-    storageBucket: "nanohub-script.firebasestorage.app",
-    messagingSenderId: "499111949014",
-    appId: "1:499111949014:web:4aa0a7157a482c697f8f77"
+const firebaseConfig = {
+  apiKey: "AIzaSyCytEdjWUPSetPumXzK0KxOi7Q8m8JFjRc",
+  authDomain: "nanohub-script.firebaseapp.com",
+  databaseURL: "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "nanohub-script",
+  storageBucket: "nanohub-script.firebasestorage.app",
+  messagingSenderId: "499111949014",
+  appId: "1:499111949014:web:4aa0a7157a482c697f8f77"
   };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
