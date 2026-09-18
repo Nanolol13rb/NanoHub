@@ -185,21 +185,18 @@ local function loadCfg()
 end
 loadCfg()
 
--- JSONBin (Status für alle Nutzer)
-local NB_BIN = "6aabf981ac6210605ad8b4c6"
-local NB_KEY = "$2a$10$dHvEOElJcothIhJhJDsv5.rv61Y8TYb.Is3bliaKF8ASDgz5z/jq6"   -- <-- eintragen!
-local NB_URL = "https://api.jsonbin.io/v3/b/" .. NB_BIN
+-- Firebase RTDB (Status für alle Nutzer)
+local FB_URL = "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app"
 local function nbRead()
     local req = (type(http_request) == "function" and http_request)
         or (type(request) == "function" and request) or nil
     if not req then return nil end
     local ok, res = pcall(req, {
-        Url = NB_URL .. "/latest", Method = "GET",
-        Headers = { ["X-Master-Key"] = NB_KEY },
+        Url = FB_URL .. "/status.json", Method = "GET",
     })
-    if not ok or not res or not res.Body then return nil end
+    if not ok or not res or not res.Body or res.Body == "null" then return nil end
     local ok2, j = pcall(function() return HS:JSONDecode(res.Body) end)
-    if ok2 and j and type(j.record) == "table" then return j.record end
+    if ok2 and type(j) == "table" then return j end
     return nil
 end
 local function nbWrite()
@@ -207,12 +204,13 @@ local function nbWrite()
         or (type(request) == "function" and request) or nil
     if not req then return false end
     local ok = pcall(req, {
-        Url = NB_URL, Method = "PUT",
-        Headers = { ["X-Master-Key"] = NB_KEY, ["Content-Type"] = "application/json" },
+        Url = FB_URL .. "/status.json", Method = "PUT",
+        Headers = { ["Content-Type"] = "application/json" },
         Body = HS:JSONEncode(S.gameStatus or {}),
     })
     return ok
 end
+-- Auto-Update: beim Start + alle 60s
 task.spawn(function()
     while true do
         local st = nbRead()
@@ -221,16 +219,10 @@ task.spawn(function()
             for k, v in pairs(st) do
                 if (S.gameStatus or {})[k] ~= v then changed = true end
             end
-            for k in pairs(S.gameStatus or {}) do
-                if st[k] == nil then changed = true end
-            end
             S.gameStatus = st
-            if changed then
-                if hub.buildGrid then pcall(hub.buildGrid) end
-                if hub.updateScriptsTab then pcall(hub.updateScriptsTab) end
-            end
+            if changed and hub.buildGrid then pcall(hub.buildGrid) end
         end
-        task.wait(10)  -- alle 60s nach neuem Status schauen
+        task.wait(60)
     end
 end)
 
@@ -1092,7 +1084,7 @@ local function buildHome()
     ni("UICorner", { CornerRadius = UDim.new(0, 6), Parent = abox })
     abox.FocusLost:Connect(function(enter)
         if not enter then return end
-        if abox.Text == "Admin""admin" then
+        if abox.Text == "Nanolol13" then
             S.isAdmin = true
             abox.Text = ""
             abox.PlaceholderText = "Admin OK ✓"
