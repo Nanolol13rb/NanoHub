@@ -26,11 +26,13 @@
              display:flex; align-items:center; justify-content:center; font-weight:900; color:#0a0b12; font-size:14px; }
   .userchip b { font-size:13px; }
   .logout { background:none; border:0; color:#ff545c; cursor:pointer; font-size:12px; font-weight:700; }
+  .adminpill { background:#2a1e0c; color:#ffaa3c; font-size:10px; font-weight:800; padding:3px 8px;
+               border-radius:6px; letter-spacing:.5px; }
 
   .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:50;
              align-items:center; justify-content:center; }
   .overlay.show { display:flex; }
-  .modal { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:28px; width:320px; }
+  .modal { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:28px; width:320px; position:relative; }
   .modal h2 { font-size:18px; margin-bottom:16px; text-align:center; }
   .modal input { width:100%; background:#0a0b12; border:1px solid #2a3046; color:#f0f2fc; border-radius:10px;
                  padding:11px 14px; font-size:14px; margin-bottom:10px; outline:none; }
@@ -42,7 +44,6 @@
   .modal .err { color:#ff545c; font-size:12px; text-align:center; min-height:16px; margin-bottom:6px; }
   .modal .close { position:absolute; top:10px; right:14px; background:none; border:0; color:#969eb6;
                   font-size:18px; cursor:pointer; }
-  .modal { position:relative; }
 
   .hero { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:28px; margin-bottom:28px; }
   .hero h2 { font-size:20px; margin-bottom:6px; }
@@ -60,6 +61,15 @@
   .down    { background:#2a0e10; color:#ff545c; } .down .dot { background:#ff545c; }
   .unknown { background:#1a1d2b; color:#969eb6; } .unknown .dot { background:#969eb6; }
 
+  .abtns { display:flex; gap:6px; margin-top:12px; }
+  .abtn { flex:1; border:0; padding:7px 0; border-radius:8px; font-size:11px; font-weight:800;
+          cursor:pointer; opacity:.45; }
+  .abtn:hover { opacity:.8; }
+  .abtn.on { opacity:1; outline:2px solid #fff3; }
+  .abtn.bup { background:#0e2217; color:#60e28a; }
+  .abtn.bwork { background:#2a1e0c; color:#ffaa3c; }
+  .abtn.bdown { background:#2a0e10; color:#ff545c; }
+
   .loader { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:24px; }
   .loader h2 { font-size:17px; margin-bottom:12px; }
   code { display:block; background:#0a0b12; border:1px solid #232840; border-radius:10px; padding:14px;
@@ -67,6 +77,11 @@
   button.copy { background:#9664ff; color:#0a0b12; border:0; padding:10px 22px; border-radius:10px;
                 font-weight:700; font-size:14px; cursor:pointer; }
   button.copy:hover { filter:brightness(1.15); }
+
+  #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px);
+           background:#1c2033; border:1px solid #2a3046; color:#f0f2fc; padding:10px 20px;
+           border-radius:10px; font-size:13px; font-weight:600; transition:transform .25s; z-index:99; }
+  #toast.show { transform:translateX(-50%) translateY(0); }
 
   footer { text-align:center; color:#5a6078; font-size:12px; margin-top:40px; }
   .live { display:inline-block; width:8px; height:8px; border-radius:50%; background:#60e28a;
@@ -82,7 +97,6 @@
 </svg>
 
 <div class="content">
-
   <header>
     <div class="brand">
       <div class="logo">N</div>
@@ -96,7 +110,7 @@
 
   <div class="hero">
     <h2>Server Status</h2>
-    <p>Live-Status aller Games — Admin setzt sie im Hub. Update alle 30s. <span class="live"></span>live</p>
+    <p>Live-Status aller Games — Updates in Echtzeit. <span class="live"></span>live</p>
   </div>
 
   <div class="grid" id="statusGrid"></div>
@@ -107,11 +121,10 @@
     <button class="copy" onclick="copyLoader(this)">Copy Loader</button>
   </div>
 
-  <footer>NanoHub • made by Nano • Status via JSONBin • Auth via Firebase</footer>
+  <footer>NanoHub • made by Nano • Status via Firebase • Auth via Firebase</footer>
 </div>
 
-<!-- Login / Register Modal -->
-<div class="overlay" id="authOverlay">
+<div id="authOverlay" class="overlay">
   <div class="modal">
     <button class="close" id="authClose">✕</button>
     <h2 id="authTitle">Account erstellen</h2>
@@ -125,10 +138,13 @@
   </div>
 </div>
 
+<div id="toast"></div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
-  // ===== Firebase (deine Werte) =====
+  // ===== Firebase =====
   const firebaseConfig = {
     apiKey: "AIzaSyCytEdjWUPSetPumXzK0KxOi7Q8m8JFjRc",
     authDomain: "nanohub-script.firebaseapp.com",
@@ -139,10 +155,14 @@
   };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
+  const db = firebase.database();
 
-  // ===== Status (JSONBin) =====
-  const BIN_URL = "https://api.jsonbin.io/v3/b/6aabf981ac6210605ad8b4c6/latest";
+  // ===== Deine RTDB-URL =====
+  const FB_DB_URL = "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app";
+
+  const ADMIN_USERS = ["nanolol13"];  // diese Usern sehen die Admin-Buttons
   const DEFAULT_GAMES = ["Mine Antarctica", "Blade Ball"];
+
   const BADGE = {
     up:      ["up",      "🟢 UP"],
     working: ["working", "🟠 WORKING ON"],
@@ -152,34 +172,68 @@
     const [cls, txt] = BADGE[st] || ["unknown", "OFFLINE"];
     return '<span class="badge ' + cls + '"><span class="dot"></span>' + txt + '</span>';
   }
-  async function loadStatus(){
+
+  let isAdmin = false;
+  let curStatus = {};
+
+  // ===== Live-Status via Firebase Push (sofort, kein Polling!) =====
+  db.ref("status").on("value", snap => {
+    curStatus = snap.val() || {};
+    renderStatus();
+  }, err => {
+    document.getElementById("statusGrid").innerHTML =
+      '<div class="card"><h3>Verbindungsfehler</h3>' + badgeFor(null) + '</div>';
+  });
+
+  function renderStatus(){
     const grid = document.getElementById("statusGrid");
+    const names = [...DEFAULT_GAMES];
+    for (const n of Object.keys(curStatus)) if (!names.includes(n)) names.push(n);
+    grid.innerHTML = names.map(n => {
+      let adminBtns = "";
+      if (isAdmin) {
+        const st = curStatus[n] || "";
+        adminBtns =
+          '<div class="abtns">' +
+          '<button class="abtn bup '   + (st==="up"?"on":"")      + '" onclick="setStatus(\'' + n + '\',\'up\')">UP</button>' +
+          '<button class="abtn bwork ' + (st==="working"?"on":"") + '" onclick="setStatus(\'' + n + '\',\'working\')">WORKING</button>' +
+          '<button class="abtn bdown ' + (st==="down"?"on":"")    + '" onclick="setStatus(\'' + n + '\',\'down\')">DOWN</button>' +
+          '</div>';
+      }
+      return '<div class="card"><h3>' + n + '</h3>' + badgeFor(curStatus[n]) + adminBtns + '</div>';
+    }).join("");
+  }
+
+  async function setStatus(name, val){
+    toast("Speichere " + name + " → " + val + "…");
     try {
-      const r = await fetch(BIN_URL);
-      const j = await r.json();
-      const st = j.record || {};
-      const names = [];
-      for (const n of DEFAULT_GAMES) if (!names.includes(n)) names.push(n);
-      for (const n of Object.keys(st)) if (!names.includes(n)) names.push(n);
-      grid.innerHTML = names.map(n =>
-        '<div class="card"><h3>' + n + '</h3>' + badgeFor(st[n]) + '</div>'
-      ).join("");
+      const r = await fetch(FB_DB_URL + "/status.json", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [name]: val })
+      });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      toast("✓ " + name + " → " + val.toUpperCase() + " (für ALLE live)");
     } catch(e) {
-      grid.innerHTML = DEFAULT_GAMES.map(n =>
-        '<div class="card"><h3>' + n + '</h3>' + badgeFor(null) + '</div>'
-      ).join("");
+      toast("✗ Fehler: " + e.message);
     }
   }
-  loadStatus();
-  setInterval(loadStatus, 30000);
+
+  function toast(msg){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._tm);
+    t._tm = setTimeout(() => t.classList.remove("show"), 2600);
+  }
 
   // ===== Auth =====
-  let mode = "register"; // register | login
+  let mode = "register";
   const overlay = document.getElementById("authOverlay");
-  const err     = document.getElementById("authErr");
-  const title   = document.getElementById("authTitle");
-  const submit  = document.getElementById("authSubmit");
-  const sw      = document.getElementById("authSwitch");
+  const err = document.getElementById("authErr");
+  const title = document.getElementById("authTitle");
+  const submit = document.getElementById("authSubmit");
+  const sw = document.getElementById("authSwitch");
 
   function setMode(m){
     mode = m;
@@ -194,7 +248,6 @@
   function errMsg(code){
     if (code === "auth/api-key-not-valid" || code === "auth/invalid-api-key") return "Firebase-Config falsch eingetragen";
     if (code === "auth/email-already-in-use") return "Username schon vergeben";
-    if (code === "auth/invalid-email") return "Ungültiger Username";
     if (code === "auth/weak-password") return "Passwort zu schwach (min. 6 Zeichen)";
     if (code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential") return "Username oder Passwort falsch";
     if (code === "auth/too-many-requests") return "Zu viele Versuche — kurz warten";
@@ -221,22 +274,27 @@
     }
   });
 
-  // ===== UI je nach Login-Zustand =====
   const authArea = document.getElementById("authArea");
   auth.onAuthStateChanged(u => {
     const lb = document.getElementById("loaderBox");
     if (u) {
       const name = u.displayName || (u.email || "?").split("@")[0];
+      isAdmin = ADMIN_USERS.includes(name.toLowerCase());
       authArea.innerHTML =
         '<div class="userchip"><div class="uavatar">' + name.charAt(0).toUpperCase() + '</div>' +
-        '<b>' + name + '</b><button class="logout" id="logoutBtn">Logout</button></div>';
+        '<b>' + name + '</b>' +
+        (isAdmin ? '<span class="adminpill">ADMIN</span>' : '') +
+        '<button class="logout" id="logoutBtn">Logout</button></div>';
       document.getElementById("logoutBtn").onclick = () => auth.signOut();
       overlay.classList.remove("show");
       if (lb) lb.style.display = "";
+      renderStatus();
     } else {
+      isAdmin = false;
       if (lb) lb.style.display = "none";
       authArea.innerHTML = '<button class="authbtn" id="openAuth">Anmelden / Registrieren</button>';
       document.getElementById("openAuth").onclick = () => { err.textContent = ""; overlay.classList.add("show"); };
+      renderStatus();
     }
   });
 
