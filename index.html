@@ -52,6 +52,9 @@
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; margin-bottom:28px; }
   .card { background:#141722; border:1px solid #232840; border-radius:14px; padding:18px; }
   .card h3 { font-size:15px; margin-bottom:12px; }
+  .card .gicon { width:46px; height:46px; border-radius:10px; background:linear-gradient(135deg,#9664ff,#5ac8ff);
+                 display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:10px;
+                 object-fit:cover; }
   .badge { display:inline-flex; align-items:center; gap:8px; padding:5px 12px; border-radius:8px;
            font-size:12px; font-weight:700; }
   .dot { width:8px; height:8px; border-radius:50%; animation:pulse 1.2s infinite; }
@@ -145,24 +148,26 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
   // ===== Firebase =====
-const firebaseConfig = {
-  apiKey: "AIzaSyCytEdjWUPSetPumXzK0KxOi7Q8m8JFjRc",
-  authDomain: "nanohub-script.firebaseapp.com",
-  databaseURL: "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "nanohub-script",
-  storageBucket: "nanohub-script.firebasestorage.app",
-  messagingSenderId: "499111949014",
-  appId: "1:499111949014:web:4aa0a7157a482c697f8f77"
+  const firebaseConfig = {
+    apiKey: "AIzaSyCytEdjWUPSetPumXzK0KxOi7Q8m8JFjRc",
+    authDomain: "nanohub-script.firebaseapp.com",
+    databaseURL: "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "nanohub-script",
+    storageBucket: "nanohub-script.firebasestorage.app",
+    messagingSenderId: "499111949014",
+    appId: "1:499111949014:web:4aa0a7157a482c697f8f77"
   };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
 
-  // ===== Deine RTDB-URL =====
   const FB_DB_URL = "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app";
-
-  const ADMIN_USERS = ["nanolol13"];  // diese Usern sehen die Admin-Buttons
-  const DEFAULT_GAMES = ["Mine Antarctica", "Blade Ball"];
+  const ADMIN_USERS = ["nanolol13"];
+  const GAME_META = {
+    "Mine Antarctica": { emoji: "🧊", placeId: 138686218420016 },
+    "Blade Ball":      { emoji: "⚔️", placeId: 13772394625 }
+  };
+  const DEFAULT_GAMES = Object.keys(GAME_META);
 
   const BADGE = {
     up:      ["up",      "🟢 UP"],
@@ -177,7 +182,7 @@ const firebaseConfig = {
   let isAdmin = false;
   let curStatus = {};
 
-  // ===== Live-Status via Firebase Push (sofort, kein Polling!) =====
+  // ===== Live-Status via Firebase Push =====
   db.ref("status").on("value", snap => {
     curStatus = snap.val() || {};
     renderStatus();
@@ -185,6 +190,24 @@ const firebaseConfig = {
     document.getElementById("statusGrid").innerHTML =
       '<div class="card"><h3>Verbindungsfehler</h3>' + badgeFor(null) + '</div>';
   });
+
+  // ===== Echte Roblox-Icons laden (Fallback: Emoji) =====
+  (async function loadIcons(){
+    const ids = Object.values(GAME_META).map(m => m.placeId).filter(Boolean);
+    if (!ids.length) return;
+    try {
+      const r = await fetch("https://thumbnails.roblox.com/v1/places/gameicons?placeIds=" + ids.join(",") + "&size=150x150&format=Png");
+      const j = await r.json();
+      for (const d of (j.data || [])) {
+        if (d.state === "Completed" && d.imageUrl) {
+          for (const m of Object.values(GAME_META)) {
+            if (m.placeId === d.placeId) m.icon = d.imageUrl;
+          }
+        }
+      }
+      renderStatus();
+    } catch(e) { /* bleibt beim Emoji */ }
+  })();
 
   function renderStatus(){
     const grid = document.getElementById("statusGrid");
@@ -201,7 +224,11 @@ const firebaseConfig = {
           '<button class="abtn bdown ' + (st==="down"?"on":"")    + '" onclick="setStatus(\'' + n + '\',\'down\')">DOWN</button>' +
           '</div>';
       }
-      return '<div class="card"><h3>' + n + '</h3>' + badgeFor(curStatus[n]) + adminBtns + '</div>';
+      const meta = GAME_META[n] || {};
+      const iconHtml = meta.icon
+        ? '<img class="gicon" src="' + meta.icon + '">'
+        : '<div class="gicon">' + (meta.emoji || "🎮") + '</div>';
+      return '<div class="card">' + iconHtml + '<h3>' + n + '</h3>' + badgeFor(curStatus[n]) + adminBtns + '</div>';
     }).join("");
   }
 
