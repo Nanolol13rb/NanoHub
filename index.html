@@ -49,14 +49,15 @@
   .hero h2 { font-size:20px; margin-bottom:6px; }
   .hero p { color:#969eb6; font-size:14px; }
 
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:14px; margin-bottom:28px; }
-  .card { background:#141722; border:1px solid #232840; border-radius:14px; padding:18px; }
-  .card h3 { font-size:15px; margin-bottom:12px; }
-  .card .gicon { width:46px; height:46px; border-radius:10px; background:linear-gradient(135deg,#9664ff,#5ac8ff);
-                 display:flex; align-items:center; justify-content:center; font-size:22px; margin-bottom:10px;
-                 object-fit:cover; }
-  .badge { display:inline-flex; align-items:center; gap:8px; padding:5px 12px; border-radius:8px;
-           font-size:12px; font-weight:700; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; margin-bottom:28px; }
+  .card { position:relative; background:#141722; border:2px solid #000; border-radius:12px; padding:12px; height:150px; }
+  .card:hover { background:#1c2033; }
+  .gicon { position:absolute; top:12px; left:14px; width:64px; height:64px; border-radius:10px;
+           background:#1c2033; object-fit:cover; }
+  .gtitle { position:absolute; top:86px; left:14px; right:14px; font-size:14px; font-weight:900;
+            letter-spacing:.5px; color:#f0f2fc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .gbadge { position:absolute; top:10px; right:10px; display:inline-flex; align-items:center; gap:7px;
+            padding:4px 10px; border-radius:8px; font-size:11px; font-weight:700; }
   .dot { width:8px; height:8px; border-radius:50%; animation:pulse 1.2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
   .up      { background:#0e2217; color:#60e28a; } .up .dot { background:#60e28a; }
@@ -64,7 +65,7 @@
   .down    { background:#2a0e10; color:#ff545c; } .down .dot { background:#ff545c; }
   .unknown { background:#1a1d2b; color:#969eb6; } .unknown .dot { background:#969eb6; }
 
-  .abtns { display:flex; gap:6px; margin-top:12px; }
+  .abtns { position:absolute; bottom:12px; left:14px; right:14px; display:flex; gap:6px; }
   .abtn { flex:1; border:0; padding:7px 0; border-radius:8px; font-size:11px; font-weight:800;
           cursor:pointer; opacity:.45; }
   .abtn:hover { opacity:.8; }
@@ -163,22 +164,18 @@
 
   const FB_DB_URL = "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app";
   const ADMIN_USERS = ["nanolol13"];
+  // disp = echter Titel im Hub, emoji = Fallback-Bild, placeId = Roblox-Icon
   const GAME_META = {
     "Mine Antarctica": { disp: "[▲] Mine Antarctica", emoji: "🧊", placeId: 138686218420016 },
     "Blade Ball":      { disp: "Blade Ball",          emoji: "⚔️", placeId: 13772394625 }
   };
-
   const DEFAULT_GAMES = Object.keys(GAME_META);
 
   const BADGE = {
-    up:      ["up",      "🟢 UP"],
-    working: ["working", "🟠 WORKING ON"],
-    down:    ["down",    "🔴 DOWN"]
+    up:      ["up",      "UP"],
+    working: ["working", "working on"],
+    down:    ["down",    "Down"]
   };
-  function badgeFor(st){
-    const [cls, txt] = BADGE[st] || ["unknown", "OFFLINE"];
-    return '<span class="badge ' + cls + '"><span class="dot"></span>' + txt + '</span>';
-  }
 
   let isAdmin = false;
   let curStatus = {};
@@ -189,7 +186,7 @@
     renderStatus();
   }, err => {
     document.getElementById("statusGrid").innerHTML =
-      '<div class="card"><h3>Verbindungsfehler</h3>' + badgeFor(null) + '</div>';
+      '<div class="card"><div class="gtitle">Verbindungsfehler</div></div>';
   });
 
   function renderStatus(){
@@ -212,10 +209,13 @@
         ? "https://www.roblox.com/asset-thumbnail/image?placeId=" + meta.placeId + "&width=150&height=150&format=png"
         : null;
       const iconHtml = iconUrl
-        ? '<div class="gicon" style="position:relative;">' + (meta.emoji || "🎮") +
-          '<img src="' + iconUrl + '" onerror="this.remove()" style="position:absolute;inset:0;width:100%;height:100%;border-radius:10px;object-fit:cover;"></div>'
-        : '<div class="gicon">' + (meta.emoji || "🎮") + '</div>';
-      return '<div class="card">' + iconHtml + '<h3>' + (meta.disp || n) + '</h3>' + badgeFor(curStatus[n]) + adminBtns + '</div>';
+        ? '<img class="gicon" src="' + iconUrl + '" onerror="this.outerHTML=\'<div class="gicon" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' + (meta.emoji || "🎮") + '</div>\'">'
+        : '<div class="gicon" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' + (meta.emoji || "🎮") + '</div>';
+      const bd = BADGE[curStatus[n]] || ["unknown", "OFFLINE"];
+      return '<div class="card">' + iconHtml +
+             '<span class="gbadge ' + bd[0] + '"><span class="dot"></span>' + bd[1] + '</span>' +
+             '<div class="gtitle">' + (meta.disp || n).toUpperCase() + '</div>' +
+             adminBtns + '</div>';
     }).join("");
   }
 
