@@ -50,8 +50,11 @@
   .hero p { color:#969eb6; font-size:14px; }
 
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; margin-bottom:28px; }
-  .card { position:relative; background:#141722; border:2px solid #000; border-radius:12px; padding:12px; height:150px; }
+  .card { position:relative; background:#141722; border:2px solid #000; border-radius:12px; padding:12px; height:150px;
+          overflow:hidden; }
   .card:hover { background:#1c2033; }
+  .gbg { position:absolute; inset:0; background-size:cover; background-position:center;
+         filter:blur(9px) brightness(0.45) saturate(1.2); transform:scale(1.15); }
   .gicon { position:absolute; top:12px; left:14px; width:64px; height:64px; border-radius:10px;
            background:#1c2033; overflow:hidden; }
   .gtitle { position:absolute; top:86px; left:14px; right:14px; font-size:14px; font-weight:900;
@@ -166,7 +169,7 @@
   const ADMIN_USERS = ["nanolol13"];
 
   // disp = echter Titel wie im Hub | emoji = Fallback | placeId = fuer Icon-Fetch
-  // icon = kann manuell gefuellt werden (tr.rbxcdn.com-URL), sonst holt es loadIcons()
+  // icon = optional manuell (tr.rbxcdn.com-URL), sonst holt es loadIcons() automatisch
   const GAME_META = {
     "Mine Antarctica": { disp: "[▲] Mine Antarctica", emoji: "🧊", placeId: 138686218420016, icon: "" },
     "Blade Ball":      { disp: "Blade Ball",          emoji: "⚔️", placeId: 13772394625, icon: "" }
@@ -182,7 +185,7 @@
   let isAdmin = false;
   let curStatus = {};
 
-  // ===== Roblox-Icons laden (thumbnails API, deine getestete Adresse) =====
+  // ===== Roblox-Icons laden (thumbnails API) =====
   (async function loadIcons(){
     const ids = Object.values(GAME_META).map(m => m.placeId).filter(Boolean);
     if (!ids.length) return;
@@ -228,12 +231,15 @@
       const meta = GAME_META[n] || {};
       const emoji = meta.emoji || "🎮";
       const iconUrl = meta.icon || null;
+      const bgHtml = iconUrl
+        ? '<div class="gbg" style="background-image:url(\'' + iconUrl + '\');"></div>'
+        : "";
       const iconHtml = iconUrl
         ? '<div class="gicon" data-emoji="' + emoji + '" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' +
           emoji + '<img src="' + iconUrl + '" style="position:absolute;inset:0;width:100%;height:100%;border-radius:10px;object-fit:cover;"></div>'
         : '<div class="gicon" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' + emoji + '</div>';
       const bd = BADGE[curStatus[n]] || ["unknown", "OFFLINE"];
-      return '<div class="card">' + iconHtml +
+      return '<div class="card">' + bgHtml + iconHtml +
              '<span class="gbadge ' + bd[0] + '"><span class="dot"></span>' + bd[1] + '</span>' +
              '<div class="gtitle">' + (meta.disp || n).toUpperCase() + '</div>' +
              adminBtns + '</div>';
