@@ -2307,50 +2307,6 @@ do
     searchBox.FocusLost:Connect(function()
         TS:Create(sStroke, TweenInfo.new(0.2), { Color = BG4 }):Play()
     end)
-        -- ⟳ Refresh-Button (Status sofort neu laden)
-    local refreshBtn = ni("TextButton", {
-        AnchorPoint = Vector2.new(0, 0),
-        Position = UDim2.new(0.5, 220, 0, 24),
-        Size = UDim2.new(0, 38, 0, 38),
-        BackgroundColor3 = BG2,
-        BorderSizePixel = 0,
-        Text = "⟳",
-        TextColor3 = CYAN,
-        Font = Enum.Font.GothamBold,
-        TextSize = 20,
-        AutoButtonColor = false,
-        ZIndex = 86,
-        Parent = picker,
-    })
-    ni("UICorner", { CornerRadius = UDim.new(0, 10), Parent = refreshBtn })
-    local rStroke = ni("UIStroke", { Color = BG4, Thickness = 1.2, Parent = refreshBtn })
-    refreshBtn.MouseEnter:Connect(function()
-        TS:Create(refreshBtn, TweenInfo.new(0.2), { BackgroundColor3 = BG3 }):Play()
-        TS:Create(rStroke, TweenInfo.new(0.2), { Color = ACC }):Play()
-    end)
-    refreshBtn.MouseLeave:Connect(function()
-        TS:Create(refreshBtn, TweenInfo.new(0.2), { BackgroundColor3 = BG2 }):Play()
-        TS:Create(rStroke, TweenInfo.new(0.2), { Color = BG4 }):Play()
-    end)
-    local refreshing = false
-    refreshBtn.MouseButton1Click:Connect(function()
-        if refreshing then return end
-        refreshing = true
-        local spin = TS:Create(refreshBtn, TweenInfo.new(0.8, Enum.EasingStyle.Linear), { Rotation = 360 })
-        spin:Play()
-        spin.Completed:Connect(function() refreshBtn.Rotation = 0 end)
-        task.spawn(function()
-            local st = nbRead()
-            if st then
-                S.gameStatus = st
-                if hub.buildGrid then pcall(hub.buildGrid) end
-                toast("✓ Status aktualisiert", GRN)
-            else
-                toast("✗ Status nicht erreichbar", RED)
-            end
-            refreshing = false
-        end)
-    end)
 
     searchBox:GetPropertyChangedSignal("Text"):Connect(function()
         local q = string.lower(searchBox.Text)
