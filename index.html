@@ -56,7 +56,7 @@
   .gbg { position:absolute; inset:0; background-size:cover; background-position:center;
          filter:blur(9px) brightness(0.45) saturate(1.2); transform:scale(1.15); }
   .gicon { position:absolute; top:12px; left:14px; width:64px; height:64px; border-radius:10px;
-           object-fit:cover; background:#1c2033; }
+           background:#1c2033; overflow:hidden; }
   .gtitle { position:absolute; top:86px; left:14px; right:14px; font-size:14px; font-weight:900;
             letter-spacing:.5px; color:#f0f2fc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .gbadge { position:absolute; top:10px; right:10px; display:inline-flex; align-items:center; gap:7px;
@@ -168,10 +168,11 @@
   const FB_DB_URL = "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app";
   const ADMIN_USERS = ["nanolol13"];
 
-  // disp = echter Titel wie im Hub | icon = Bild aus deiner Repo (assets-Ordner)
+  // disp = echter Titel wie im Hub | emoji = Fallback | placeId = fuer Icon-Fetch
+  // icon = optional manuell (tr.rbxcdn.com-URL), sonst holt es loadIcons() automatisch
   const GAME_META = {
-    "Mine Antarctica": { disp: "[▲] Mine Antarctica", icon: "assets/mine.png" },
-    "Blade Ball":      { disp: "Blade Ball",          icon: "assets/blade.png" }
+    "Mine Antarctica": { disp: "[▲] Mine Antarctica", icon: "mine.png" },
+    "Blade Ball":      { disp: "Blade Ball",          icon: "Blade.png" }
   };
   const DEFAULT_GAMES = Object.keys(GAME_META);
 
@@ -183,6 +184,25 @@
 
   let isAdmin = false;
   let curStatus = {};
+
+  // ===== Roblox-Icons laden (thumbnails API) =====
+  (async function loadIcons(){
+    const ids = Object.values(GAME_META).map(m => m.placeId).filter(Boolean);
+    if (!ids.length) return;
+    try {
+      const r = await fetch("https://thumbnails.roblox.com/v1/places/gameicons?placeIds=" + ids.join(",") + "&size=150x150&format=Png");
+      const j = await r.json();
+      let hit = false;
+      for (const d of (j.data || [])) {
+        if (d.state === "Completed" && d.imageUrl) {
+          for (const m of Object.values(GAME_META)) {
+            if (m.placeId === d.placeId && !m.icon) { m.icon = d.imageUrl; hit = true; }
+          }
+        }
+      }
+      if (hit) renderStatus();
+    } catch(e) { /* Emoji-Fallback bleibt */ }
+  })();
 
   // ===== Live-Status via Firebase Push =====
   db.ref("status").on("value", snap => {
@@ -209,11 +229,15 @@
           '</div>';
       }
       const meta = GAME_META[n] || {};
-      const iconUrl = meta.icon || "";
+      const emoji = meta.emoji || "🎮";
+      const iconUrl = meta.icon || null;
       const bgHtml = iconUrl
         ? '<div class="gbg" style="background-image:url(\'' + iconUrl + '\');"></div>'
         : "";
-      const iconHtml = '<img class="gicon" src="' + iconUrl + '">';
+      const iconHtml = iconUrl
+        ? '<div class="gicon" data-emoji="' + emoji + '" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' +
+          emoji + '<img src="' + iconUrl + '" style="position:absolute;inset:0;width:100%;height:100%;border-radius:10px;object-fit:cover;"></div>'
+        : '<div class="gicon" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' + emoji + '</div>';
       const bd = BADGE[curStatus[n]] || ["unknown", "OFFLINE"];
       return '<div class="card">' + bgHtml + iconHtml +
              '<span class="gbadge ' + bd[0] + '"><span class="dot"></span>' + bd[1] + '</span>' +
@@ -221,6 +245,14 @@
              adminBtns + '</div>';
     }).join("");
 
+    // Bild-Fallback sauber per JS
+    grid.querySelectorAll(".gicon img").forEach(img => {
+      img.onerror = function(){
+        const box = this.parentNode;
+        box.textContent = box.getAttribute("data-emoji") || "🎮";
+      };
+    });
+    // Admin-Buttons verdrahten
     grid.querySelectorAll(".abtn").forEach(btn => {
       btn.onclick = () => setStatus(btn.getAttribute("data-g"), btn.getAttribute("data-v"));
     });
