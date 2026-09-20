@@ -7,7 +7,7 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
   body { background:#08090e; color:#f0f2fc; min-height:100vh; overflow-x:hidden; }
-  .waves { position:fixed; inset:0; z-index:0; opacity:.5; }
+  .waves { position:fixed; inset:0; z-index:0; opacity:.6; }
   .content { position:relative; z-index:1; max-width:860px; margin:0 auto; padding:40px 20px 80px; }
 
   header { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:40px; }
@@ -42,40 +42,28 @@
   .modal .primary:hover { filter:brightness(1.15); }
   .modal .switch { width:100%; background:none; border:0; color:#969eb6; font-size:12px; cursor:pointer; }
   .modal .err { color:#ff545c; font-size:12px; text-align:center; min-height:16px; margin-bottom:6px; }
-  .modal .close { position:absolute; top:10px; right:14px; background:none; border:0; color:#969eb6;
-                  font-size:18px; cursor:pointer; }
-
-  .hero { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:28px; margin-bottom:28px; }
-  .hero h2 { font-size:20px; margin-bottom:6px; }
-  .hero p { color:#969eb6; font-size:14px; }
+  .mclose { position:absolute; top:10px; right:12px; background:none; border:0; color:#969eb6;
+            font-size:16px; cursor:pointer; }
+  .mclose:hover { color:#f0f2fc; }
 
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; margin-bottom:28px; }
-  .card { position:relative; background:#141722; border:2px solid #000; border-radius:12px; padding:12px; height:184px; }
+  .card { position:relative; background:#141722; border:2px solid #000; border-radius:12px; padding:12px; height:184px; overflow:hidden; }
   .card:hover { background:#1c2033; }
   .gbg { position:absolute; inset:0; background-size:cover; background-position:center;
          filter:blur(9px) brightness(0.45) saturate(1.2); transform:scale(1.15); }
   .gicon { position:absolute; top:12px; left:14px; width:64px; height:64px; border-radius:10px;
-           background:#1c2033; overflow:hidden; }
+           background:#1c2033; object-fit:cover; z-index:1; }
   .gtitle { position:absolute; top:86px; left:14px; right:14px; font-size:14px; font-weight:900;
-            letter-spacing:.5px; color:#f0f2fc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-          .golink { position:absolute; top:84px; right:12px; display:inline-flex; align-items:center; gap:5px;
-            background:#9664ff; color:#0a0b12; text-decoration:none; font-size:11px; font-weight:800;
-            letter-spacing:.4px; padding:6px 11px; border-radius:8px; z-index:2; }
-  .golink:hover { filter:brightness(1.18); }
-  .golink .ar { transition:transform .15s; }
-  .golink:hover .ar { transform:translateX(3px); }    
+            letter-spacing:.5px; color:#f0f2fc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; z-index:1; }
   .gbadge { position:absolute; top:10px; right:10px; display:inline-flex; align-items:center; gap:7px;
-            padding:4px 10px; border-radius:8px; font-size:11px; font-weight:700; }
+            padding:4px 10px; border-radius:8px; font-size:11px; font-weight:700; z-index:2; }
   .dot { width:8px; height:8px; border-radius:50%; animation:pulse 1.2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
   .up      { background:#0e2217; color:#60e28a; } .up .dot { background:#60e28a; }
   .working { background:#2a1e0c; color:#ffaa3c; } .working .dot { background:#ffaa3c; }
   .down    { background:#2a0e10; color:#ff545c; } .down .dot { background:#ff545c; }
   .unknown { background:#1a1d2b; color:#969eb6; } .unknown .dot { background:#969eb6; }
-
-  .golink { position:absolute; top:84px; right:12px; display:inline-flex; align-items:center; gap:5px;
-            background:#9664ff; color:#0a0b12; text-decoration:none; font-size:11px; font-weight:800;
-            letter-spacing:.4px; padding:6px 11px; border-radius:8px; z-index:2; }
+  .abtns { position:absolute; bottom:54px; left:14px; right:14px; display:flex; gap:6px; z-index:2; }
   .abtn { flex:1; border:0; padding:7px 0; border-radius:8px; font-size:11px; font-weight:800;
           cursor:pointer; opacity:.45; }
   .abtn:hover { opacity:.8; }
@@ -83,31 +71,30 @@
   .abtn.bup { background:#0e2217; color:#60e28a; }
   .abtn.bwork { background:#2a1e0c; color:#ffaa3c; }
   .abtn.bdown { background:#2a0e10; color:#ff545c; }
+  .golink { position:absolute; bottom:14px; left:14px; right:14px; display:flex; align-items:center; justify-content:center; gap:6px;
+            background:#9664ff; color:#0a0b12; text-decoration:none; font-size:12px; font-weight:800;
+            letter-spacing:.5px; padding:9px 0; border-radius:9px; z-index:2; }
+  .golink:hover { filter:brightness(1.18); }
+  .golink .ar { transition:transform .15s; }
+  .golink:hover .ar { transform:translateX(3px); }
 
-  .loader { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:24px; }
-  .loader h2 { font-size:17px; margin-bottom:12px; }
-  code { display:block; background:#0a0b12; border:1px solid #232840; border-radius:10px; padding:14px;
-         font-family:Consolas,monospace; font-size:12px; color:#5ac8ff; word-break:break-all; margin-bottom:12px; }
-  button.copy { background:#9664ff; color:#0a0b12; border:0; padding:10px 22px; border-radius:10px;
-                font-weight:700; font-size:14px; cursor:pointer; }
-  button.copy:hover { filter:brightness(1.15); }
-
-  #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px);
-           background:#1c2033; border:1px solid #2a3046; color:#f0f2fc; padding:10px 20px;
-           border-radius:10px; font-size:13px; font-weight:600; transition:transform .25s; z-index:99; }
-  #toast.show { transform:translateX(-50%) translateY(0); }
-
-  footer { text-align:center; color:#5a6078; font-size:12px; margin-top:40px; }
-  .live { display:inline-block; width:8px; height:8px; border-radius:50%; background:#60e28a;
-          animation:pulse 1.2s infinite; margin-right:6px; }
+  .section { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:22px; margin-bottom:24px; }
+  .section h2 { font-size:18px; margin-bottom:6px; }
+  .section p { color:#969eb6; font-size:13px; }
+  .live { color:#60e28a; }
+  .loaderbox { display:none; }
+  .codebox { background:#0a0b12; border:1px solid #2a3046; border-radius:10px; padding:14px;
+             font-family:Consolas,monospace; font-size:13px; color:#8be9fd; overflow-x:auto; margin:14px 0; }
+  .copybtn { background:#9664ff; color:#0a0b12; border:0; padding:10px 22px; border-radius:10px;
+             font-weight:700; font-size:14px; cursor:pointer; }
+  .copybtn:hover { filter:brightness(1.15); }
+  footer { text-align:center; color:#5a6079; font-size:12px; margin-top:40px; }
 </style>
 </head>
 <body>
-
-<svg class="waves" viewBox="0 0 1440 600" preserveAspectRatio="none">
-  <path fill="#9664ff" fill-opacity="0.12" d="M0,300 C240,380 480,220 720,300 C960,380 1200,220 1440,300 L1440,600 L0,600 Z"/>
-  <path fill="#5ac8ff" fill-opacity="0.08" d="M0,400 C240,480 480,320 720,400 C960,480 1200,320 1440,400 L1440,600 L0,600 Z"/>
-  <path fill="#9664ff" fill-opacity="0.06" d="M0,500 C240,560 480,440 720,500 C960,560 1200,440 1440,500 L1440,600 L0,600 Z"/>
+<svg class="waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" preserveAspectRatio="none">
+  <path fill="#9664ff" fill-opacity="0.08" d="M0,160L48,170.7C96,181,192,203,288,197.3C384,192,480,160,576,165.3C672,171,768,213,864,224C960,235,1056,213,1152,192C1248,171,1344,149,1392,138.7L1440,128L1440,320L0,320Z"></path>
+  <path fill="#5ac8ff" fill-opacity="0.06" d="M0,224L48,218.7C96,213,192,203,288,208C384,213,480,235,576,229.3C672,224,768,192,864,186.7C960,181,1056,203,1152,213.3C1248,224,1344,224,1392,224L1440,224L1440,320L0,320Z"></path>
 </svg>
 
 <div class="content">
@@ -119,253 +106,28 @@
         <div class="sub">AimLock • ESP • Key-System • Game Hub — v2.7</div>
       </div>
     </div>
-    <div id="authArea"></div>
+    <div id="authArea"><button class="authbtn" id="openAuth">Anmelden / Registrieren</button></div>
   </header>
 
-  <div class="hero">
+  <div class="section">
     <h2>Server Status</h2>
-    <p>Live-Status aller Games — Updates in Echtzeit. <span class="live"></span>live</p>
+    <p>Live-Status aller Games — Updates in Echtzeit. <span class="live">● live</span></p>
   </div>
 
   <div class="grid" id="statusGrid"></div>
 
-  <div class="loader" id="loaderBox" style="display:none;">
+  <div class="section">
     <h2>📜 Get the Script</h2>
-    <code id="loaderCode">loadstring(game:HttpGet("https://raw.githubusercontent.com/Nanolol13rb/NanoHub/main/script.lua"))()</code>
-    <button class="copy" onclick="copyLoader(this)">Copy Loader</button>
+    <p>Nur für angemeldete User sichtbar.</p>
+    <div class="loaderbox" id="loaderBox">
+      <div class="codebox" id="loaderCode">loadstring(game:HttpGet("https://raw.githubusercontent.com/Nanolol13rb/NanoHub/main/script.lua"))()</div>
+      <button class="copybtn" onclick="copyLoader(this)">Copy Loader</button>
+    </div>
   </div>
 
   <footer>NanoHub • made by Nano • Status via Firebase • Auth via Firebase</footer>
 </div>
 
-<div id="authOverlay" class="overlay">
+<div class="overlay" id="authOverlay">
   <div class="modal">
-    <button class="close" id="authClose">✕</button>
-    <h2 id="authTitle">Account erstellen</h2>
-    <div class="err" id="authErr"></div>
-    <form id="authForm">
-      <input type="text" id="authUser" placeholder="Username" autocomplete="username">
-      <input type="password" id="authPass" placeholder="Passwort" autocomplete="current-password">
-      <button type="submit" class="primary" id="authSubmit">Registrieren</button>
-    </form>
-    <button class="switch" id="authSwitch">Schon ein Account? → Anmelden</button>
-  </div>
-</div>
-
-<div id="toast"></div>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script>
-  // ===== Firebase =====
-  const firebaseConfig = {
-    apiKey: "AIzaSyCytEdjWUPSetPumXzK0KxOi7Q8m8JFjRc",
-    authDomain: "nanohub-script.firebaseapp.com",
-    databaseURL: "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "nanohub-script",
-    storageBucket: "nanohub-script.firebasestorage.app",
-    messagingSenderId: "499111949014",
-    appId: "1:499111949014:web:4aa0a7157a482c697f8f77"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  const FB_DB_URL = "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app";
-  const ADMIN_USERS = ["nanolol13"];
-
-  // disp = echter Titel wie im Hub | emoji = Fallback | placeId = fuer Icon-Fetch
-  // icon = optional manuell (tr.rbxcdn.com-URL), sonst holt es loadIcons() automatisch
-  const GAME_META = {
-    "Mine Antarctica": { disp: "[▲] Mine Antarctica", icon: "mine.png", placeId: 138686218420016 },
-    "Blade Ball":      { disp: "Blade Ball",          icon: "Blade.png", placeId: 13772394625 }
-  };
-  const DEFAULT_GAMES = Object.keys(GAME_META);
-
-  const BADGE = {
-    up:      ["up",      "UP"],
-    working: ["working", "working on"],
-    down:    ["down",    "Down"]
-  };
-
-  let isAdmin = false;
-  let curStatus = {};
-
-  // ===== Roblox-Icons laden (thumbnails API) =====
-  (async function loadIcons(){
-    const ids = Object.values(GAME_META).map(m => m.placeId).filter(Boolean);
-    if (!ids.length) return;
-    try {
-      const r = await fetch("https://thumbnails.roblox.com/v1/places/gameicons?placeIds=" + ids.join(",") + "&size=150x150&format=Png");
-      const j = await r.json();
-      let hit = false;
-      for (const d of (j.data || [])) {
-        if (d.state === "Completed" && d.imageUrl) {
-          for (const m of Object.values(GAME_META)) {
-            if (m.placeId === d.placeId && !m.icon) { m.icon = d.imageUrl; hit = true; }
-          }
-        }
-      }
-      if (hit) renderStatus();
-    } catch(e) { /* Emoji-Fallback bleibt */ }
-  })();
-
-  // ===== Live-Status via Firebase Push =====
-  db.ref("status").on("value", snap => {
-    curStatus = snap.val() || {};
-    renderStatus();
-  }, err => {
-    document.getElementById("statusGrid").innerHTML =
-      '<div class="card"><div class="gtitle">Verbindungsfehler</div></div>';
-  });
-
-  function renderStatus(){
-    const grid = document.getElementById("statusGrid");
-    const names = [...DEFAULT_GAMES];
-    grid.innerHTML = names.map(n => {
-      let adminBtns = "";
-      if (isAdmin) {
-        const st = curStatus[n] || "";
-        adminBtns =
-          '<div class="abtns">' +
-          '<button class="abtn bup '   + (st==="up"?"on":"")      + '" data-g="' + n + '" data-v="up">UP</button>' +
-          '<button class="abtn bwork ' + (st==="working"?"on":"") + '" data-g="' + n + '" data-v="working">WORKING</button>' +
-          '<button class="abtn bdown ' + (st==="down"?"on":"")    + '" data-g="' + n + '" data-v="down">DOWN</button>' +
-          '</div>';
-      }
-      const meta = GAME_META[n] || {};
-      const emoji = meta.emoji || "🎮";
-      const iconUrl = meta.icon || null;
-      const bgHtml = iconUrl
-        ? '<div class="gbg" style="background-image:url(\'' + iconUrl + '\');"></div>'
-        : "";
-      const iconHtml = iconUrl
-        ? '<div class="gicon" data-emoji="' + emoji + '" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' +
-          emoji + '<img src="' + iconUrl + '" style="position:absolute;inset:0;width:100%;height:100%;border-radius:10px;object-fit:cover;"></div>'
-        : '<div class="gicon" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' + emoji + '</div>';
-      const bd = BADGE[curStatus[n]] || ["unknown", "OFFLINE"];
-      const goHtml = meta.placeId
-        ? '<a class="golink" href="https://www.roblox.com/games/' + meta.placeId + '/" target="_blank" rel="noopener">Go to <span class="ar">→</span></a>'
-        : "";
-      return '<div class="card">' + bgHtml + iconHtml +
-             '<span class="gbadge ' + bd[0] + '"><span class="dot"></span>' + bd[1] + '</span>' +
-             '<div class="gtitle">' + (meta.disp || n).toUpperCase() + '</div>' +
-             goHtml + adminBtns + '</div>';
-    }).join("");
-
-    // Bild-Fallback sauber per JS
-    grid.querySelectorAll(".gicon img").forEach(img => {
-      img.onerror = function(){
-        const box = this.parentNode;
-        box.textContent = box.getAttribute("data-emoji") || "🎮";
-      };
-    });
-    // Admin-Buttons verdrahten
-    grid.querySelectorAll(".abtn").forEach(btn => {
-      btn.onclick = () => setStatus(btn.getAttribute("data-g"), btn.getAttribute("data-v"));
-    });
-  }
-
-  async function setStatus(name, val){
-    toast("Speichere " + name + " → " + val + "…");
-    try {
-      const r = await fetch(FB_DB_URL + "/status.json", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [name]: val })
-      });
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      toast("✓ " + name + " → " + val.toUpperCase() + " (für ALLE live)");
-    } catch(e) {
-      toast("✗ Fehler: " + e.message);
-    }
-  }
-
-  function toast(msg){
-    const t = document.getElementById("toast");
-    t.textContent = msg;
-    t.classList.add("show");
-    clearTimeout(t._tm);
-    t._tm = setTimeout(() => t.classList.remove("show"), 2600);
-  }
-
-  // ===== Auth =====
-  let mode = "register";
-  const overlay = document.getElementById("authOverlay");
-  const err = document.getElementById("authErr");
-  const title = document.getElementById("authTitle");
-  const submit = document.getElementById("authSubmit");
-  const sw = document.getElementById("authSwitch");
-
-  function setMode(m){
-    mode = m;
-    if (m === "register"){ title.textContent = "Account erstellen"; submit.textContent = "Registrieren";
-      sw.textContent = "Schon ein Account? → Anmelden"; }
-    else { title.textContent = "Anmelden"; submit.textContent = "Login";
-      sw.textContent = "Noch kein Account? → Registrieren"; }
-  }
-  sw.onclick = () => { setMode(mode === "register" ? "login" : "register"); err.textContent = ""; };
-  document.getElementById("authClose").onclick = () => overlay.classList.remove("show");
-
-  function errMsg(code){
-    if (code === "auth/api-key-not-valid" || code === "auth/invalid-api-key") return "Firebase-Config falsch eingetragen";
-    if (code === "auth/email-already-in-use") return "Username schon vergeben";
-    if (code === "auth/weak-password") return "Passwort zu schwach (min. 6 Zeichen)";
-    if (code === "auth/user-not-found" || code === "auth/wrong-password" || code === "auth/invalid-credential") return "Username oder Passwort falsch";
-    if (code === "auth/too-many-requests") return "Zu viele Versuche — kurz warten";
-    if (code === "auth/unauthorized-domain") return "Domain nicht freigeschaltet (Firebase Settings)";
-    if (code === "auth/operation-not-allowed") return "Email/Passwort in Firebase nicht aktiviert";
-    return "Fehler: " + code;
-  }
-
-  document.getElementById("authForm").addEventListener("submit", e => {
-    e.preventDefault();
-    const u = document.getElementById("authUser").value.trim();
-    const p = document.getElementById("authPass").value;
-    err.textContent = "";
-    if (u.length < 3) { err.textContent = "Username min. 3 Zeichen"; return; }
-    if (p.length < 6) { err.textContent = "Passwort min. 6 Zeichen"; return; }
-    const email = u.toLowerCase() + "@nanohub.local";
-    if (mode === "register"){
-      auth.createUserWithEmailAndPassword(email, p)
-        .then(cred => cred.user.updateProfile({ displayName: u }))
-        .catch(ex => err.textContent = errMsg(ex.code));
-    } else {
-      auth.signInWithEmailAndPassword(email, p)
-        .catch(ex => err.textContent = errMsg(ex.code));
-    }
-  });
-
-  const authArea = document.getElementById("authArea");
-  auth.onAuthStateChanged(u => {
-    const lb = document.getElementById("loaderBox");
-    if (u) {
-      const name = u.displayName || (u.email || "?").split("@")[0];
-      isAdmin = ADMIN_USERS.includes(name.toLowerCase());
-      authArea.innerHTML =
-        '<div class="userchip"><div class="uavatar">' + name.charAt(0).toUpperCase() + '</div>' +
-        '<b>' + name + '</b>' +
-        (isAdmin ? '<span class="adminpill">ADMIN</span>' : '') +
-        '<button class="logout" id="logoutBtn">Logout</button></div>';
-      document.getElementById("logoutBtn").onclick = () => auth.signOut();
-      overlay.classList.remove("show");
-      if (lb) lb.style.display = "";
-      renderStatus();
-    } else {
-      isAdmin = false;
-      if (lb) lb.style.display = "none";
-      authArea.innerHTML = '<button class="authbtn" id="openAuth">Anmelden / Registrieren</button>';
-      document.getElementById("openAuth").onclick = () => { err.textContent = ""; overlay.classList.add("show"); };
-      renderStatus();
-    }
-  });
-
-  function copyLoader(btn){
-    navigator.clipboard.writeText(document.getElementById("loaderCode").textContent);
-    btn.textContent = "✓ Copied!";
-    setTimeout(() => btn.textContent = "Copy Loader", 1500);
-  }
-</script>
-</body>
-</html>
+    <button class="mclose" id="close
