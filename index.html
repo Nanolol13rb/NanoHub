@@ -244,10 +244,13 @@
           emoji + '<img src="' + iconUrl + '" style="position:absolute;inset:0;width:100%;height:100%;border-radius:10px;object-fit:cover;"></div>'
         : '<div class="gicon" style="display:flex;align-items:center;justify-content:center;font-size:26px;">' + emoji + '</div>';
       const bd = BADGE[curStatus[n]] || ["unknown", "OFFLINE"];
+      const goHtml = meta.placeId
+        ? '<a class="golink" href="https://www.roblox.com/games/' + meta.placeId + '/" target="_blank" rel="noopener">Go to <span class="ar">→</span></a>'
+        : "";
       return '<div class="card">' + bgHtml + iconHtml +
              '<span class="gbadge ' + bd[0] + '"><span class="dot"></span>' + bd[1] + '</span>' +
              '<div class="gtitle">' + (meta.disp || n).toUpperCase() + '</div>' +
-             adminBtns + '</div>';
+             goHtml + adminBtns + '</div>';
     }).join("");
 
     // Bild-Fallback sauber per JS
