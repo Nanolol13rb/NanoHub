@@ -216,7 +216,6 @@
   function renderStatus(){
     const grid = document.getElementById("statusGrid");
     const names = [...DEFAULT_GAMES];
-    for (const n of Object.keys(curStatus)) if (!names.includes(n)) names.push(n);
     grid.innerHTML = names.map(n => {
       let adminBtns = "";
       if (isAdmin) {
