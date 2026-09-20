@@ -7,8 +7,8 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
   body { background:#08090e; color:#f0f2fc; min-height:100vh; overflow-x:hidden; }
-  .waves { position:fixed; inset:0; z-index:0; opacity:.6; }
-  .content { position:relative; z-index:1; max-width:860px; margin:0 auto; padding:40px 20px 80px; }
+  .waves { position:fixed; inset:0; z-index:0; opacity:.5; }
+  .content { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:40px 20px 80px; }
 
   header { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:40px; }
   .brand { display:flex; align-items:center; gap:14px; }
@@ -42,11 +42,15 @@
   .modal .primary:hover { filter:brightness(1.15); }
   .modal .switch { width:100%; background:none; border:0; color:#969eb6; font-size:12px; cursor:pointer; }
   .modal .err { color:#ff545c; font-size:12px; text-align:center; min-height:16px; margin-bottom:6px; }
-  .mclose { position:absolute; top:10px; right:12px; background:none; border:0; color:#969eb6;
-            font-size:16px; cursor:pointer; }
-  .mclose:hover { color:#f0f2fc; }
+  .modal .close { position:absolute; top:10px; right:14px; background:none; border:0; color:#969eb6;
+                  font-size:18px; cursor:pointer; }
 
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; margin-bottom:28px; }
+  .panel { background:#12141f; border:1px solid #23283c; border-radius:14px; padding:22px; margin-bottom:26px; }
+  .panel h2 { font-size:19px; margin-bottom:6px; }
+  .psub { color:#969eb6; font-size:13px; }
+  .live { color:#60e28a; font-weight:700; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; margin-bottom:26px; }
   .card { position:relative; background:#141722; border:2px solid #000; border-radius:12px; padding:12px; height:184px; overflow:hidden; }
   .card:hover { background:#1c2033; }
   .gbg { position:absolute; inset:0; background-size:cover; background-position:center;
@@ -64,8 +68,7 @@
   .down    { background:#2a0e10; color:#ff545c; } .down .dot { background:#ff545c; }
   .unknown { background:#1a1d2b; color:#969eb6; } .unknown .dot { background:#969eb6; }
   .abtns { position:absolute; bottom:54px; left:14px; right:14px; display:flex; gap:6px; z-index:2; }
-  .abtn { flex:1; border:0; padding:7px 0; border-radius:8px; font-size:11px; font-weight:800;
-          cursor:pointer; opacity:.45; }
+  .abtn { flex:1; border:0; padding:7px 0; border-radius:8px; font-size:11px; font-weight:800; cursor:pointer; opacity:.45; }
   .abtn:hover { opacity:.8; }
   .abtn.on { opacity:1; outline:2px solid #fff3; }
   .abtn.bup { background:#0e2217; color:#60e28a; }
@@ -78,23 +81,25 @@
   .golink .ar { transition:transform .15s; }
   .golink:hover .ar { transform:translateX(3px); }
 
-  .section { background:#12141f; border:1px solid #2a3046; border-radius:16px; padding:22px; margin-bottom:24px; }
-  .section h2 { font-size:18px; margin-bottom:6px; }
-  .section p { color:#969eb6; font-size:13px; }
-  .live { color:#60e28a; }
-  .loaderbox { display:none; }
-  .codebox { background:#0a0b12; border:1px solid #2a3046; border-radius:10px; padding:14px;
-             font-family:Consolas,monospace; font-size:13px; color:#8be9fd; overflow-x:auto; margin:14px 0; }
-  .copybtn { background:#9664ff; color:#0a0b12; border:0; padding:10px 22px; border-radius:10px;
-             font-weight:700; font-size:14px; cursor:pointer; }
+  .scriptrow { display:flex; gap:10px; margin-top:14px; }
+  .codebox { flex:1; background:#0a0b12; border:1px solid #2a3046; border-radius:10px; padding:12px 14px;
+             font-family:Consolas,monospace; font-size:12.5px; color:#9ee6a8; overflow-x:auto; white-space:nowrap; }
+  .copybtn { background:#9664ff; color:#0a0b12; border:0; border-radius:10px; padding:0 20px;
+             font-weight:800; font-size:13px; cursor:pointer; }
   .copybtn:hover { filter:brightness(1.15); }
-  footer { text-align:center; color:#5a6079; font-size:12px; margin-top:40px; }
+
+  footer { text-align:center; color:#5c6478; font-size:12px; margin-top:30px; }
+
+  .toast { position:fixed; top:18px; right:18px; background:#141722; border:1px solid #2a3046; color:#f0f2fc;
+           padding:10px 16px; border-radius:10px; font-size:13px; font-weight:600; opacity:0; transform:translateY(-8px);
+           transition:all .25s; z-index:99; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateY(0); }
 </style>
 </head>
 <body>
-<svg class="waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" preserveAspectRatio="none">
-  <path fill="#9664ff" fill-opacity="0.08" d="M0,160L48,170.7C96,181,192,203,288,197.3C384,192,480,160,576,165.3C672,171,768,213,864,224C960,235,1056,213,1152,192C1248,171,1344,149,1392,138.7L1440,128L1440,320L0,320Z"></path>
-  <path fill="#5ac8ff" fill-opacity="0.06" d="M0,224L48,218.7C96,213,192,203,288,208C384,213,480,235,576,229.3C672,224,768,192,864,186.7C960,181,1056,203,1152,213.3C1248,224,1344,224,1392,224L1440,224L1440,320L0,320Z"></path>
+<svg class="waves" viewBox="0 0 1440 800" preserveAspectRatio="none">
+  <path d="M0,500 C300,420 500,620 800,540 C1100,460 1250,640 1440,560 L1440,800 L0,800 Z" fill="#171430" opacity=".7"/>
+  <path d="M0,620 C350,540 600,720 950,640 C1200,585 1350,700 1440,660 L1440,800 L0,800 Z" fill="#1c1a3d" opacity=".6"/>
 </svg>
 
 <div class="content">
@@ -106,20 +111,19 @@
         <div class="sub">AimLock • ESP • Key-System • Game Hub — v2.7</div>
       </div>
     </div>
-    <div id="authArea"><button class="authbtn" id="openAuth">Anmelden / Registrieren</button></div>
+    <div id="authArea"></div>
   </header>
 
-  <div class="section">
+  <div class="panel">
     <h2>Server Status</h2>
-    <p>Live-Status aller Games — Updates in Echtzeit. <span class="live">● live</span></p>
+    <div class="psub">Live-Status aller Games — Updates in Echtzeit • <span class="live">● live</span></div>
   </div>
 
   <div class="grid" id="statusGrid"></div>
 
-  <div class="section">
+  <div class="panel" id="scriptSec" style="display:none;">
     <h2>📜 Get the Script</h2>
-    <p>Nur für angemeldete User sichtbar.</p>
-    <div class="loaderbox" id="loaderBox">
+    <div class="scriptrow">
       <div class="codebox" id="loaderCode">loadstring(game:HttpGet("https://raw.githubusercontent.com/Nanolol13rb/NanoHub/main/script.lua"))()</div>
       <button class="copybtn" onclick="copyLoader(this)">Copy Loader</button>
     </div>
@@ -130,4 +134,142 @@
 
 <div class="overlay" id="authOverlay">
   <div class="modal">
-    <button class="mclose" id="close
+    <button class="close" onclick="document.getElementById('authOverlay').classList.remove('show')">✕</button>
+    <h2 id="authTitle">Anmelden</h2>
+    <div class="err" id="authErr"></div>
+    <input id="authEmail" type="email" placeholder="E-Mail">
+    <input id="authPass" type="password" placeholder="Passwort">
+    <button class="primary" id="authGo">Login</button>
+    <button class="switch" id="authSwitch">Kein Account? Registrieren</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+  firebase.initializeApp({
+    apiKey: "AIzaSyCytEdjWUPSetPumXzK0KxOi7Q8m8JFjRc",
+    authDomain: "nanohub-script.firebaseapp.com",
+    databaseURL: "https://nanohub-script-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "nanohub-script",
+    storageBucket: "nanohub-script.firebasestorage.app",
+    messagingSenderId: "499111949014",
+    appId: "1:499111949014:web:4aa0a7157a482c697f8f77"
+  });
+  const auth = firebase.auth();
+  const db   = firebase.database();
+
+  const GAME_META = {
+    "Mine Antarctica": { disp: "[▲] Mine Antarctica", icon: "mine.png",  placeId: 138686218420016 },
+    "Blade Ball":      { disp: "Blade Ball",          icon: "Blade.png", placeId: 13772394625 }
+  };
+  const DEFAULT_GAMES = Object.keys(GAME_META);
+  const BADGE = { up:["up","UP"], working:["working","working on"], down:["down","Down"] };
+
+  let curStatus = {}, isAdmin = false, regMode = false, toastT;
+
+  function toast(m){
+    const t = document.getElementById("toast");
+    t.textContent = m; t.classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  db.ref("status").on("value", s => { curStatus = s.val() || {}; renderStatus(); });
+
+  function renderStatus(){
+    const grid = document.getElementById("statusGrid");
+    grid.innerHTML = DEFAULT_GAMES.map(n => {
+      const meta = GAME_META[n];
+      const bd = BADGE[curStatus[n]] || ["unknown","OFFLINE"];
+      let adminBtns = "";
+      if (isAdmin) {
+        const st = curStatus[n] || "";
+        adminBtns = '<div class="abtns">' +
+          '<button class="abtn bup '   + (st==="up"?"on":"")      + '" data-g="' + n + '" data-s="up">UP</button>' +
+          '<button class="abtn bwork ' + (st==="working"?"on":"") + '" data-g="' + n + '" data-s="working">WORKING</button>' +
+          '<button class="abtn bdown ' + (st==="down"?"on":"")    + '" data-g="' + n + '" data-s="down">DOWN</button>' +
+          '</div>';
+      }
+      return '<div class="card">' +
+        '<div class="gbg" style="background-image:url(\'' + meta.icon + '\');"></div>' +
+        '<img class="gicon" src="' + meta.icon + '">' +
+        '<span class="gbadge ' + bd[0] + '"><span class="dot"></span>' + bd[1] + '</span>' +
+        '<div class="gtitle">' + meta.disp.toUpperCase() + '</div>' +
+        '<a class="golink" href="https://www.roblox.com/games/' + meta.placeId + '/" target="_blank" rel="noopener">Go to <span class="ar">→</span></a>' +
+        adminBtns + '</div>';
+    }).join("");
+    grid.querySelectorAll(".abtn").forEach(b =>
+      b.onclick = () => window.setStatus(b.dataset.g, b.dataset.s));
+  }
+
+  window.setStatus = function(key, state){
+    if (!isAdmin) return toast("Nur Admin 👀");
+    db.ref("status/" + key).set(state)
+      .then(() => toast(key + " → " + state))
+      .catch(e => toast("Fehler: " + e.message));
+  };
+
+  function drawAuth(){
+    const area = document.getElementById("authArea");
+    area.innerHTML = '<button class="authbtn" id="openAuth">Anmelden / Registrieren</button>';
+    document.getElementById("openAuth").onclick = () => {
+      document.getElementById("authErr").textContent = "";
+      document.getElementById("authOverlay").classList.add("show");
+    };
+  }
+
+  function drawUser(u){
+    const area = document.getElementById("authArea");
+    const name = (u.email || "user").split("@")[0];
+    area.innerHTML =
+      '<div class="userchip"><div class="uavatar">' + name.charAt(0).toUpperCase() + '</div>' +
+      '<b>' + name + '</b>' + (isAdmin ? '<span class="adminpill">ADMIN</span>' : '') +
+      '<button class="logout" id="outBtn">Logout</button></div>';
+    document.getElementById("outBtn").onclick = () => auth.signOut();
+  }
+
+  auth.onAuthStateChanged(u => {
+    const sec = document.getElementById("scriptSec");
+    if (u) {
+      isAdmin = ((u.email || "").split("@")[0].toLowerCase() === "nanolol13");
+      drawUser(u); sec.style.display = "block";
+    } else {
+      isAdmin = false; drawAuth(); sec.style.display = "none";
+    }
+    renderStatus();
+  });
+
+  document.getElementById("authGo").onclick = () => {
+    const err = document.getElementById("authErr");
+    err.textContent = "";
+    const em = document.getElementById("authEmail").value.trim();
+    const pw = document.getElementById("authPass").value;
+    if (!em || !pw) { err.textContent = "Bitte E-Mail + Passwort."; return; }
+    const job = regMode
+      ? auth.createUserWithEmailAndPassword(em, pw)
+      : auth.signInWithEmailAndPassword(em, pw);
+    job.then(() => {
+      document.getElementById("authOverlay").classList.remove("show");
+      document.getElementById("authPass").value = "";
+      toast(regMode ? "Account erstellt ✓" : "Willkommen zurück ✓");
+    }).catch(e => { err.textContent = e.message; });
+  };
+
+  document.getElementById("authSwitch").onclick = () => {
+    regMode = !regMode;
+    document.getElementById("authTitle").textContent = regMode ? "Registrieren" : "Anmelden";
+    document.getElementById("authGo").textContent    = regMode ? "Account erstellen" : "Login";
+    document.getElementById("authSwitch").textContent = regMode ? "Doch Login" : "Kein Account? Registrieren";
+  };
+
+  function copyLoader(btn){
+    navigator.clipboard.writeText(document.getElementById("loaderCode").textContent);
+    btn.textContent = "✓ Copied!";
+    setTimeout(() => btn.textContent = "Copy Loader", 1500);
+  }
+</script>
+</body>
+</html>
