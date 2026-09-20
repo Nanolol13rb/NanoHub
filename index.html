@@ -137,7 +137,7 @@
     <button class="close" onclick="document.getElementById('authOverlay').classList.remove('show')">✕</button>
     <h2 id="authTitle">Anmelden</h2>
     <div class="err" id="authErr"></div>
-    <input id="authEmail" type="email" placeholder="E-Mail">
+    <input id="authEmail" type="text" placeholder="Username">
     <input id="authPass" type="password" placeholder="Passwort">
     <button class="primary" id="authGo">Login</button>
     <button class="switch" id="authSwitch">Kein Account? Registrieren</button>
@@ -245,7 +245,8 @@
   document.getElementById("authGo").onclick = () => {
     const err = document.getElementById("authErr");
     err.textContent = "";
-    const em = document.getElementById("authEmail").value.trim();
+      let em = document.getElementById("authEmail").value.trim();
+    if (!em.includes("@")) em = em + "@nanohub.de";
     const pw = document.getElementById("authPass").value;
     if (!em || !pw) { err.textContent = "Bitte E-Mail + Passwort."; return; }
     const job = regMode
