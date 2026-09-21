@@ -7,14 +7,21 @@
 <style>
   * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
   body { background:#08090e; color:#f0f2fc; min-height:100vh; overflow-x:hidden; }
-  .waves { position:fixed; inset:0; z-index:0; opacity:.5; }
+  .waves { position:fixed; inset:0; z-index:0; opacity:.95; }
+  .waves path { animation:waveDrift 14s ease-in-out infinite alternate; }
+  .waves path:nth-child(2) { animation-duration:20s; animation-delay:-6s; }
+  @keyframes waveDrift { from{transform:translateY(0)} to{transform:translateY(-26px)} }
+
   .content { position:relative; z-index:1; max-width:900px; margin:0 auto; padding:40px 20px 80px; }
 
   header { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:40px; }
   .brand { display:flex; align-items:center; gap:14px; }
-  .logo { width:52px; height:52px; border-radius:14px; background:linear-gradient(135deg,#9664ff,#5ac8ff);
-          display:flex; align-items:center; justify-content:center; font-weight:900; font-size:24px; color:#0a0b12; }
-  h1 { font-size:26px; } h1 span { color:#9664ff; }
+  .logo { width:54px; height:54px; border-radius:15px; background:linear-gradient(135deg,#9664ff,#5ac8ff);
+          display:flex; align-items:center; justify-content:center; font-weight:900; font-size:25px; color:#0a0b12;
+          animation:logoPulse 3s ease-in-out infinite; }
+  @keyframes logoPulse { 0%,100%{box-shadow:0 0 14px #9664ff55} 50%{box-shadow:0 0 30px #9664ffaa} }
+   h1 { font-size:28px; background:linear-gradient(90deg,#f0f2fc,#9664ff 55%,#5ac8ff);
+       -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
   .sub { color:#969eb6; font-size:13px; }
 
   .authbtn { background:#9664ff; color:#0a0b12; border:0; padding:9px 20px; border-radius:10px;
@@ -45,14 +52,17 @@
   .modal .close { position:absolute; top:10px; right:14px; background:none; border:0; color:#969eb6;
                   font-size:18px; cursor:pointer; }
 
-  .panel { background:#12141f; border:1px solid #23283c; border-radius:14px; padding:22px; margin-bottom:26px; }
+   .panel { background:linear-gradient(180deg,#141830,#10121d); border:1px solid #2c3250; border-radius:16px; padding:24px;
+           margin-bottom:26px; box-shadow:0 18px 40px -18px #9664ff44, 0 8px 24px -12px #000c; }
   .panel h2 { font-size:19px; margin-bottom:6px; }
   .psub { color:#969eb6; font-size:13px; }
   .live { color:#60e28a; font-weight:700; }
 
   .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px; margin-bottom:26px; }
-  .card { position:relative; background:#141722; border:2px solid #000; border-radius:12px; padding:12px; height:184px; overflow:hidden; }
-  .card:hover { background:#1c2033; }
+  .card { position:relative; background:#141722; border:1px solid #2c3250; border-radius:14px; padding:12px; height:184px; overflow:hidden;
+          transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .card:hover { transform:translateY(-4px); border-color:#9664ff88;
+                box-shadow:0 14px 34px -14px #9664ff66, 0 10px 22px -10px #000d; }
   .gbg { position:absolute; inset:0; background-size:cover; background-position:center;
          filter:blur(9px) brightness(0.45) saturate(1.2); transform:scale(1.15); }
   .gicon { position:absolute; top:12px; left:14px; width:64px; height:64px; border-radius:10px;
@@ -75,15 +85,17 @@
   .abtn.bwork { background:#2a1e0c; color:#ffaa3c; }
   .abtn.bdown { background:#2a0e10; color:#ff545c; }
   .golink { position:absolute; bottom:14px; left:14px; right:14px; display:flex; align-items:center; justify-content:center; gap:6px;
-            background:#9664ff; color:#0a0b12; text-decoration:none; font-size:12px; font-weight:800;
-            letter-spacing:.5px; padding:9px 0; border-radius:9px; z-index:2; }
+            background:linear-gradient(90deg,#9664ff,#6f8dff); color:#0a0b12; text-decoration:none; font-size:12px; font-weight:800;
+            letter-spacing:.5px; padding:9px 0; border-radius:9px; z-index:2; transition:filter .15s; }
   .golink:hover { filter:brightness(1.18); }
   .golink .ar { transition:transform .15s; }
   .golink:hover .ar { transform:translateX(3px); }
 
   .scriptrow { display:flex; gap:10px; margin-top:14px; }
-  .codebox { flex:1; background:#0a0b12; border:1px solid #2a3046; border-radius:10px; padding:12px 14px;
+  .codebox { flex:1; background:#0a0b12; border:1px solid #2a3046; border-left:3px solid #9664ff; border-radius:10px; padding:12px 14px;
              font-family:Consolas,monospace; font-size:12.5px; color:#9ee6a8; overflow-x:auto; white-space:nowrap; }
+  .codebox::-webkit-scrollbar { height:6px; }
+  .codebox::-webkit-scrollbar-thumb { background:#2c3250; border-radius:3px; }
   .copybtn { background:#9664ff; color:#0a0b12; border:0; border-radius:10px; padding:0 20px;
              font-weight:800; font-size:13px; cursor:pointer; }
   .copybtn:hover { filter:brightness(1.15); }
