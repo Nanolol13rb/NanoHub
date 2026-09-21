@@ -300,12 +300,11 @@ hub.ui = ui
 -- Toast-Queue
 local toastQueue = {}
 local function toast(msg, col)
-    table.insert(toastQueue, true)
-    local idx = #toastQueue
     task.spawn(function()
+        local slot = #toastQueue
         local f = ni("Frame", {
             AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -14, 0, 64 + (idx - 1) * 42),
+            Position = UDim2.new(1, -14, 0, 64 + slot * 42),
             Size = UDim2.new(0, 210, 0, 34),
             BackgroundColor3 = BG2,
             BackgroundTransparency = 1,
@@ -313,6 +312,7 @@ local function toast(msg, col)
             ZIndex = 80,
             Parent = ui,
         })
+        table.insert(toastQueue, f)
         ni("UICorner", { CornerRadius = UDim.new(0, 10), Parent = f })
         local st = ni("UIStroke", { Color = col, Thickness = 1, Transparency = 0.5, Parent = f })
         ni("TextLabel", {
@@ -320,7 +320,6 @@ local function toast(msg, col)
             Position = UDim2.new(0, 10, 0, 0),
             BackgroundTransparency = 1,
             Text = msg,
-                        TextXAlignment = Enum.TextXAlignment.Center,
             TextColor3 = col,
             TextSize = 12,
             Font = Enum.Font.GothamBold,
@@ -332,8 +331,9 @@ local function toast(msg, col)
         TS:Create(f, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
         TS:Create(st, TweenInfo.new(0.3), { Transparency = 1 }):Play()
         task.wait(0.35)
+        local pos = table.find(toastQueue, f)
+        if pos then table.remove(toastQueue, pos) end
         pcall(function() f:Destroy() end)
-        table.remove(toastQueue, idx)
     end)
 end
 
