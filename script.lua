@@ -304,8 +304,8 @@ local function toast(msg, col)
     local idx = #toastQueue
     task.spawn(function()
         local f = ni("Frame", {
-            AnchorPoint = Vector2.new(0.5, 0),
-            Position = UDim2.new(0.5, 0, 0, 12 + (idx - 1) * 42),
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -14, 0, 64 + (idx - 1) * 42),
             Size = UDim2.new(0, 210, 0, 34),
             BackgroundColor3 = BG2,
             BackgroundTransparency = 1,
@@ -376,7 +376,7 @@ ni("TextLabel", { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text
 ni("TextLabel", { Position = UDim2.new(0, 58, 0, 32), Size = UDim2.new(0, 320, 0, 16), BackgroundTransparency = 1, Text = "AimLock • ESP • Key-System • Game Hub", TextColor3 = SUB, Font = Enum.Font.Gotham, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = header })
 
 -- Status-Pill
-local statusPill = ni("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -92, 0.5, 0), Size = UDim2.new(0, 96, 0, 26), BackgroundColor3 = Color3.fromRGB(36, 16, 21), BorderSizePixel = 0, Parent = header })
+local statusPill = ni("Frame", { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -92, 0.5, 0), Size = UDim2.new(0, 96, 0, 26), BackgroundColor3 = Color3.fromRGB(36, 16, 21), BorderSizePixel = 0, Visible = false, Parent = header })
 ni("UICorner", { CornerRadius = UDim.new(0, 8), Parent = statusPill })
 local statusDot = ni("Frame", { Position = UDim2.new(0, 10, 0.5, -4), Size = UDim2.new(0, 8, 0, 8), BackgroundColor3 = RED, BorderSizePixel = 0, Parent = statusPill })
 ni("UICorner", { CornerRadius = UDim.new(1, 0), Parent = statusDot })
