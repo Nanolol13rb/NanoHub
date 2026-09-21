@@ -297,15 +297,24 @@ local ui = ni("ScreenGui", {
 })
 hub.ui = ui
 
--- Toast-Queue
+-- Toast-Queue (mit Ablauf-Balken + Nachruecken)
 local toastQueue = {}
+local TOAST_H, TOAST_GAP, TOAST_TOP = 34, 8, 64
+
+local function layoutToasts()
+    for i, f in ipairs(toastQueue) do
+        TS:Create(f, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = UDim2.new(1, -14, 0, TOAST_TOP + (i - 1) * (TOAST_H + TOAST_GAP)),
+        }):Play()
+    end
+end
+
 local function toast(msg, col)
     task.spawn(function()
-        local slot = #toastQueue
         local f = ni("Frame", {
             AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -14, 0, 64 + slot * 42),
-            Size = UDim2.new(0, 210, 0, 34),
+            Position = UDim2.new(1, -14, 0, TOAST_TOP),
+            Size = UDim2.new(0, 230, 0, TOAST_H),
             BackgroundColor3 = BG2,
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
@@ -313,27 +322,57 @@ local function toast(msg, col)
             Parent = ui,
         })
         table.insert(toastQueue, f)
+        layoutToasts()
         ni("UICorner", { CornerRadius = UDim.new(0, 10), Parent = f })
         local st = ni("UIStroke", { Color = col, Thickness = 1, Transparency = 0.5, Parent = f })
         ni("TextLabel", {
-            Size = UDim2.new(1, -20, 1, 0),
-            Position = UDim2.new(0, 10, 0, 0),
+            Size = UDim2.new(1, -20, 1, -8),
+            Position = UDim2.new(0, 10, 0, 2),
             BackgroundTransparency = 1,
             Text = msg,
             TextColor3 = col,
             TextSize = 12,
             Font = Enum.Font.GothamBold,
+            TextTruncate = Enum.TextTruncate.AtEnd,
             ZIndex = 81,
             Parent = f,
         })
+        -- Ablauf-Balken unten
+        local barBg = ni("Frame", {
+            AnchorPoint = Vector2.new(0, 1),
+            Position = UDim2.new(0, 8, 1, -4),
+            Size = UDim2.new(1, -16, 0, 3),
+            BackgroundColor3 = BG4,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 81,
+            Parent = f,
+        })
+        ni("UICorner", { CornerRadius = UDim.new(1, 0), Parent = barBg })
+        local bar = ni("Frame", {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = col,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 82,
+            Parent = barBg,
+        })
+        ni("UICorner", { CornerRadius = UDim.new(1, 0), Parent = bar })
+
         TS:Create(f, TweenInfo.new(0.25, Enum.EasingStyle.Quad), { BackgroundTransparency = 0 }):Play()
-        task.wait(1.6)
+        TS:Create(barBg, TweenInfo.new(0.25), { BackgroundTransparency = 0.35 }):Play()
+        TS:Create(bar, TweenInfo.new(0.25), { BackgroundTransparency = 0 }):Play()
+        TS:Create(bar, TweenInfo.new(2, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 1, 0) }):Play()
+        task.wait(2)
         TS:Create(f, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
         TS:Create(st, TweenInfo.new(0.3), { Transparency = 1 }):Play()
-        task.wait(0.35)
+        TS:Create(barBg, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+        TS:Create(bar, TweenInfo.new(0.3), { BackgroundTransparency = 1 }):Play()
+        task.wait(0.32)
         local pos = table.find(toastQueue, f)
         if pos then table.remove(toastQueue, pos) end
         pcall(function() f:Destroy() end)
+        layoutToasts()
     end)
 end
 
