@@ -304,8 +304,8 @@ local function toast(msg, col)
     local idx = #toastQueue
     task.spawn(function()
         local f = ni("Frame", {
-            AnchorPoint = Vector2.new(1, 1),
-            Position = UDim2.new(1, -20, 1, -20 - (idx - 1) * 42),
+            AnchorPoint = Vector2.new(0.5, 0),
+            Position = UDim2.new(0.5, 0, 0, 12 + (idx - 1) * 42),
             Size = UDim2.new(0, 210, 0, 34),
             BackgroundColor3 = BG2,
             BackgroundTransparency = 1,
@@ -320,6 +320,7 @@ local function toast(msg, col)
             Position = UDim2.new(0, 10, 0, 0),
             BackgroundTransparency = 1,
             Text = msg,
+                        TextXAlignment = Enum.TextXAlignment.Center,
             TextColor3 = col,
             TextSize = 12,
             Font = Enum.Font.GothamBold,
