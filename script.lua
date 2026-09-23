@@ -156,6 +156,7 @@ local function saveCfg()
         local SKIP = {
             game = true,
             isAdmin = true,
+            gameStatus = true,
             mantOreESP = true, mantPlrESP = true, mantAutoDig = true,
             mantAutoSell = true, mantAutoBreak = true, mantSpeed = true,
             mantAntiRag = true, mantBestGlow = true,
@@ -175,7 +176,7 @@ local function loadCfg()
         if isfile and isfile(CFG_PATH) then
             local ok, d = pcall(function() return HS:JSONDecode(readfile(CFG_PATH)) end)
             if ok and type(d) == "table" then
-                local SKIPLOAD = { game = true, mantTiers = true, isAdmin = true }
+                local SKIPLOAD = { game = true, mantTiers = true, isAdmin = true, gameStatus = true }
                 for k, v in pairs(d) do
                     if not SKIPLOAD[k] and S[k] ~= nil and type(v) == type(S[k]) then S[k] = v end
                 end
