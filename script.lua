@@ -2584,7 +2584,7 @@ end
         buildGrid()
         picker.Visible = true
     end
- end          ← DIESE Zeile fehlt (schließt das do vom Picker-Block)
+ end
 
  -- ============ SETTINGS TAB ============
 
