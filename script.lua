@@ -223,7 +223,7 @@ task.spawn(function()
             S.gameStatus = st
             if changed and hub.buildGrid then pcall(hub.buildGrid) end
         end
-        task.wait(60)
+        task.wait(20)
     end
 end)
 
@@ -2574,8 +2574,12 @@ do
 
     hub.buildGrid = buildGrid
     hub.openPicker = function()
-        buildGrid()
-        picker.Visible = true
+        task.spawn(function()
+            local st = nbRead()
+            if st then S.gameStatus = st end
+            buildGrid()
+            picker.Visible = true
+        end)
     end
  end
 
