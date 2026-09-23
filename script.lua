@@ -199,14 +199,15 @@ local function nbRead()
     if ok2 and type(j) == "table" then return j end
     return nil
 end
-local function nbWrite()
+local function nbWriteGame(name, state)
     local req = (type(http_request) == "function" and http_request)
         or (type(request) == "function" and request) or nil
     if not req then return false end
-    local ok = pcall(req, {
-        Url = FB_URL .. "/status.json", Method = "PUT",
+    local ok, res = pcall(req, {
+        Url = FB_URL .. "/status/" .. HS:UrlEncode(name) .. ".json",
+        Method = "PUT",
         Headers = { ["Content-Type"] = "application/json" },
-        Body = HS:JSONEncode(S.gameStatus or {}),
+        Body = HS:JSONEncode(state),
     })
     return ok
 end
@@ -2449,7 +2450,7 @@ do
                     b.MouseButton1Click:Connect(function()
                         S.gameStatus = S.gameStatus or {}
                         S.gameStatus[g.name] = key
-                        if nbWrite() then
+                        if nbWriteGame(g.name, key) then
                             toast(d.txt .. " -> fuer ALLE gespeichert", d.col)
                         else
                             toast("Speichern fehlgeschlagen", RED)
@@ -2572,14 +2573,21 @@ do
     end
     hub.buildGrid = buildGrid
     hub.openPicker = function()
-        task.spawn(function()
-            local st = nbRead()
-            if st then S.gameStatus = st end
-            buildGrid()
-        end)
-        picker.Visible = true
+task.spawn(function()
+    local last = ""
+    while true do
+        local st = nbRead()
+        if st then
+            local enc = HS:JSONEncode(st)
+            if enc ~= last then
+                last = enc
+                S.gameStatus = st
+                if hub.buildGrid then pcall(hub.buildGrid) end
+            end
+        end
+        task.wait(20)
     end
-end
+end)
 
 -- ============ SETTINGS TAB ============
 
