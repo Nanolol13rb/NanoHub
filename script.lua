@@ -2571,13 +2571,6 @@ do
             end)
         end
     end
-    
-    hub.buildGrid = buildGrid
-    hub.openPicker = function()
-        buildGrid()
-        picker.Visible = true
-    end
-end
 
     hub.buildGrid = buildGrid
     hub.openPicker = function()
