@@ -2573,21 +2573,9 @@ do
     end
     hub.buildGrid = buildGrid
     hub.openPicker = function()
-task.spawn(function()
-    local last = ""
-    while true do
-        local st = nbRead()
-        if st then
-            local enc = HS:JSONEncode(st)
-            if enc ~= last then
-                last = enc
-                S.gameStatus = st
-                if hub.buildGrid then pcall(hub.buildGrid) end
-            end
-        end
-        task.wait(20)
+        buildGrid()
+        picker.Visible = true
     end
-end)
 
 -- ============ SETTINGS TAB ============
 
