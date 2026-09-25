@@ -208,18 +208,12 @@ local function normStatus(st)
     end
     return out
 end
-local function nbWriteGame(name, state)
-    local req = (type(http_request) == "function" and http_request)
-        or (type(request) == "function" and request) or nil
-    if not req then return false end
-    local ok, res = pcall(req, {
-        Url = FB_URL .. "/status/" .. HS:UrlEncode(name) .. ".json",
-        Method = "PUT",
-        Headers = { ["Content-Type"] = "application/json" },
-        Body = HS:JSONEncode(state),
-    })
-    return ok
+local function getStatus(gname)
+    local m = S.gameStatus or {}
+    local clean = (gname or ""):gsub("%[.-%]%s*", "")
+    return m[gname] or m[clean] or "down"
 end
+local function nbWriteGame(name, state)
 -- Auto-Update: beim Start + alle 60s
 task.spawn(function()
     while true do
@@ -2391,7 +2385,7 @@ do
                 working = { txt = "working on", col = Color3.fromRGB(255, 170, 60), bg = Color3.fromRGB(42, 30, 12) },
                 down    = { txt = "Down",       col = RED, bg = Color3.fromRGB(42, 14, 16) },
             }
-            local status = (S.gameStatus and S.gameStatus[g.name]) or "down"
+            local status = getStatus(g.name)
             local sd = STATUS_DEFS[status] or STATUS_DEFS.up
 
             -- Blinkendes Badge oben rechts
@@ -2529,7 +2523,7 @@ do
                 Position = UDim2.new(0.5, 0, 1, -12),
                 Size = UDim2.new(0, 160, 0, 34),
                 BackgroundColor3 = BG3,
-                 Text = ((S.gameStatus and S.gameStatus[g.name]) == "up") and "OPEN  →" or "🔒 CLOSE",
+                 Text = (getStatus(g.name) == "up") and "OPEN  →" or "🔒 CLOSE",
                 Font = Enum.Font.GothamBold,
                 TextSize = 14,
                 AutoButtonColor = false,
@@ -2566,7 +2560,7 @@ do
             pill.MouseLeave:Connect(hoverOff)
 
             pill.MouseButton1Click:Connect(function()
-                if (S.gameStatus and S.gameStatus[g.name]) ~= "up" then
+                if getStatus(g.name) ~= "up" then
                     toast("🔒 " .. g.name .. " ist nicht verfügbar!", RED)
                     return
                 end
