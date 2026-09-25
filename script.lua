@@ -224,7 +224,7 @@ task.spawn(function()
             S.gameStatus = st
             if changed and hub.buildGrid then pcall(hub.buildGrid) end
         end
-        task.wait(20)
+        task.wait(60)
     end
 end)
 
@@ -2572,19 +2572,25 @@ do
             end)
         end
     end
-
     hub.buildGrid = buildGrid
     hub.openPicker = function()
-        task.spawn(function()
-            local st = nbRead()
-            if st then S.gameStatus = st end
-            buildGrid()
-            picker.Visible = true
-        end)
+task.spawn(function()
+    local last = ""
+    while true do
+        local st = nbRead()
+        if st then
+            local enc = HS:JSONEncode(st)
+            if enc ~= last then
+                last = enc
+                S.gameStatus = st
+                if hub.buildGrid then pcall(hub.buildGrid) end
+            end
+        end
+        task.wait(20)
     end
- end
+end)
 
- -- ============ SETTINGS TAB ============
+-- ============ SETTINGS TAB ============
 
 addHeader(pages[4], "UI")
 addCycle(pages[4], "Theme", "themeIdx", THEME_NAMES, function(i) setThemeVars(i) end)
