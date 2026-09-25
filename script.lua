@@ -200,6 +200,14 @@ local function nbRead()
     if ok2 and type(j) == "table" then return j end
     return nil
 end
+local function normStatus(st)
+    local out = {}
+    for k, v in pairs(st or {}) do
+        out[k] = v
+        out[(k:gsub("%[.-%]%s*", ""))] = v
+    end
+    return out
+end
 local function nbWriteGame(name, state)
     local req = (type(http_request) == "function" and http_request)
         or (type(request) == "function" and request) or nil
@@ -221,7 +229,7 @@ task.spawn(function()
             for k, v in pairs(st) do
                 if (S.gameStatus or {})[k] ~= v then changed = true end
             end
-            S.gameStatus = st
+            S.gameStatus = normStatus(st)
             if changed and hub.buildGrid then pcall(hub.buildGrid) end
         end
         task.wait(60)
@@ -2574,21 +2582,17 @@ do
     end
     hub.buildGrid = buildGrid
     hub.openPicker = function()
-task.spawn(function()
-    local last = ""
-    while true do
-        local st = nbRead()
-        if st then
-            local enc = HS:JSONEncode(st)
-            if enc ~= last then
-                last = enc
+        buildGrid()
+        picker.Visible = true
+        task.spawn(function()
+            local st = nbRead()
+            if st then
                 S.gameStatus = st
-                if hub.buildGrid then pcall(hub.buildGrid) end
+                buildGrid()
             end
-        end
-        task.wait(20)
+        end)
     end
-end)
+end
 
 -- ============ SETTINGS TAB ============
 
@@ -2688,9 +2692,9 @@ if hub.setGameLbl then pcall(hub.setGameLbl) end
 if hub.statKey then pcall(hub.statKey, false) end
 if hub.setStatus then pcall(hub.setStatus, false) end
 paintNav(curTab)
-if hub.log then
+if hub.log then 
     pcall(hub.log, "System", "UI ready", GRN)
-    pcall(hub.log, "Key", "waiting for key input", SUB)
+pcall(hub.log, "Key", "waiting for key input", SUB)
 end
 
 print("[NanoHub] Dashboard v2.7 ready — Key: Nano, RightAlt = GUI")
